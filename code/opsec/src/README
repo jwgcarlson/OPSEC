@@ -1,0 +1,36 @@
+OPSEC sources.
+
+Programs:
+ - basis: produces a set of pre-whitened basis cell functions
+ - klt: computes the signal matrix for a set of basis cell functions, then
+        computes its largest eigenvalues and eigengvectors
+ - dot: computes pixel values by taking the inner product of KL mode functions
+        with a galaxy density function
+ - comma: computes the derivatives of the covariance matrix with respect to
+          model parameters (band powers, etc.)
+- estimate: computes parameter estimates
+
+Schematically, the workflow goes like this:
+
+  (selection function) => basis => klt => (KL mode functions) => comma => dot => estimate => (results)
+                                    /\                                     /\
+                                    ||                                     ||
+                        (prior correlation function)                   (galaxies)
+
+Conventions used throughout code:
+- When spherical coordinates are used, 3-dimensional positions are represented
+  by a triple (r,mu,phi), where
+      0 <= r < infty  is the distance from the origin,
+     -1 <= mu <= 1    is the cosine of the polar angle measured from the north pole,
+      0 <= phi < 2*pi is the azimuthal angle.
+  Cartesian coordinates may be constructed in the usual way as
+    x = r*sqrt(1 - mu*mu)*cos(phi),
+    y = r*sqrt(1 - mu*mu)*sin(phi),
+    z = r*mu.
+- When Cartesian coordinates are used, 3-dimensional positions are represented
+  by a triple (x,y,z).
+- Distances (including dimensionful coordinates) are measured in units of
+  Mpc/h, unless otherwise noted.
+- Integer indices a,b indicate cells: 0 <= a,b < Ncells.
+- Integer indices i,j indicate KL modes: 0 <= i,j < Nmodes.
+- Integer indices m,n indicate parameters: 0 <= m,n < Nparams.

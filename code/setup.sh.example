@@ -1,0 +1,38 @@
+# Custom compilation flags for building OPSEC and its dependencies.
+
+# Installation directory (defaults to OPSEC_ROOT).
+export PREFIX="$OPSEC_ROOT"
+
+# The following variables may be defined to override system defaults.
+#export CC=
+#export CXX=
+#export F77=
+#export MPICC=
+#export MPICXX=
+#export MPIF77=
+#export CFLAGS=
+#export CXXFLAGS=
+#export FFLAGS=
+#export CPPFLAGS=
+#export LDFLAGS=
+#export BLAS_LIBS=
+#export LAPACK_LIBS=
+#export MPIFLIBS=
+
+
+##### Setup for riemann #####
+#export CPPFLAGS="-I/home/jcarlson/include"
+#export LDFLAGS="-L/home/jcarlson/lib"
+#source /usr/lib64/openmpi/1.4-gcc/etc/mpivars.sh
+#export MPICXX="mpicxx /usr/lib64/libg2c.so.0"
+#export BLAS_LIBS=/usr/lib64/libblas.so.3
+#export LAPACK_LIBS=/usr/lib64/liblapack.so.3
+
+##### Setup for riemann with ATLAS #####
+#source /usr/lib64/openmpi/1.4-gcc/etc/mpivars.sh
+#module load fftw/2.1.5-ompi
+#export F77=gfortran
+#export CPPFLAGS="-I$FFTW_DIR/include -I$ATLAS_DIR/include"
+#export LDFLAGS="-L$FFTW_DIR/lib -L$ATLAS_DIR/lib"
+#export BLAS_LIBS="-lf77blas -lcblas -latlas"
+#export LAPACK_LIBS="-latlas"

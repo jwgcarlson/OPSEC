@@ -1,0 +1,47 @@
+This is an autotoolized distribution of the ARPACK software package.  The
+official source distribution is available online at
+    http://www.caam.rice.edu/software/ARPACK/
+This distribution adds scripts that enable ARPACK (and its parallel cousin
+PARPACK) to be built using the standard `configure && make && make install'
+recipe for installing software on Unix-like platforms.
+
+
+***** Quick installation instructions:
+
+    ./configure --prefix=<install_prefix>
+    make
+    make install
+
+This will install the libraries libarpack.a and libparpack.a to the
+<install_prefix>/lib directory.  (If you choose not to `make install', and
+instead would like to manually copy them to their final destination, note that
+the actual `.a' static libraries will be hidden in a `.libs/' sub-directory of
+the respective source directories.)
+
+
+***** Detailed installation instructions:
+
+    ./configure [OPTIONS]
+    make
+    make install
+
+The full list of options can be examined by running
+    ./configure --help=recursive
+The most relevant options are:
+    --prefix=<install_prefix>   install libraries to <install_prefix>/lib
+    --disable-shared            produce only .a libraries, not .so
+    --disable-parpack           install only libarpack.a, not the parallelized libparpack.a
+    F77=<my_f77>                compile ARPACK using my_f77 instead of the default compiler
+    MPIF77=<my_mpif77>          compile PARPACK using my_mpif77 instead of the default MPI compiler
+    FFLAGS=<my_fflags>          add the specified flags to the compile command (e.g. -O9)
+
+Examples:
+    # Example 1: install both libraries to $HOME/lib
+    ./configure --prefix=$HOME --disable-shared
+    make
+    make install
+
+    # Example 2: compile ARPACK only and copy to the top-level source directory
+    ./configure --disable-parpack
+    make
+    cp ARPACK/SRC/.libs/libarpack.a .

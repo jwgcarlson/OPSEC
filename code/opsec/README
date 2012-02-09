@@ -1,0 +1,31 @@
+OPSEC - Optimal Power Spectrum Estimation Code
+
+See doc/manual.pdf for a more complete description of what OPSEC does, and how
+it does it.  As always, if the documentation appears lacking, use the source!
+
+
+Quick build instructions:
+    ./configure --prefix=PREFIX
+    make
+    make install
+Here PREFIX is the full path where you would like OPSEC libraries and binaries
+to be installed, e.g. --prefix=/home/me/coolstuff.  Subdirectories PREFIX/bin,
+PREFIX/include, and PREFIX/lib will be created.  The default installation
+prefix is /usr/local, which is _not_ recommended.
+
+Run `./configure --help' for a full list of command line options that can be
+passed to the configure script.  The most important ones are listed here:
+    CC=
+    CXX=
+    F77=
+    MPICC=
+    MPICXX=
+    MPIF77=
+    CFLAGS=
+    CXXFLAGS=
+    FFLAGS=
+    CPPFLAGS=
+    LDFLAGS=
+    BLAS_LIBS=
+    LAPACK_LIBS=
+    MPIFLIBS=

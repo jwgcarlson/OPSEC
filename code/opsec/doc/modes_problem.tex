@@ -1,0 +1,37 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{bm}
+
+\textwidth 6.5in
+\oddsidemargin 0in
+
+\renewcommand{\vec}[1]{\bm{#1}}
+
+\begin{document}
+
+For an ideal survey defined by a periodic cube of side length $L$, the KL modes
+are simply (real and imaginary parts of) Fourier modes,
+$\psi_i \sim e^{i\vec{k}\cdot\vec{x}}$.  The pixel values $y_i$ are therefore
+just the Fourier coefficients of the density field, $y_i \sim \delta_{\vec{k}}$,
+and the band power estimates are just averages over spherical $k$-shells,
+\begin{equation}
+    p_m \sim \frac{1}{\mathcal{N}_m} \sum_{\vec{k}\in S_m} \left|\delta_{\vec{k}}\right|^2.
+\end{equation}
+
+When we perform the KL compression step, we only keep the modes that are
+expected to have the largest signal-to-noise ratio.  So far we have been
+assuming that we want to have $N_\text{modes}$ be a few thousand or so.  But
+for the ideal case, since the S/N for each mode is proportional to $P(k)$, and
+$P(k)$ is a monotonically decreasing function past $k \sim 0.015 h/\text{Mpc}$,
+this means that the modes are arranged in order of increasing $k$.  In other
+words, our limitation of keeping only finitely many modes translates directly
+into a limitation on the range of wavevectors that we are able to probe.
+
+To be precise, let us solve for the largest wavevector $K$ that we will be able
+to probe.  Since each mode occupies a volume of $(2\pi/L)^3$ in $k$-space,
+(correctly accounting for real and imaginary parts), we have
+\begin{equation}
+    N_\text{modes} = \frac{\tfrac{4\pi}{3} K^3}{(2\pi/L)^3} = \frac{1}{6\pi^2} (KL)^3.
+\end{equation}
+
+\end{document}

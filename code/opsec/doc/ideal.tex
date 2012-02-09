@@ -1,0 +1,110 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{bm}
+
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\textsf{#1}}
+\newcommand{\nbar}{\bar{n}}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\Cov}{Cov}
+
+\textwidth 6in
+\oddsidemargin 0.25in
+\parindent 0pt
+\parskip 18pt
+
+
+\title{Maximum likelihood analysis for an ideal survey}
+
+\begin{document}
+\maketitle
+
+Consider the type of ideal survey that you would get from an $N$-body
+simulation, with constant mean galaxy number density $\nbar$ over a periodic
+volume $V = L^3$.  Let $n(\vec{r})$ be the observed galaxy number density in
+real space (i.e. a sum of delta functions).  Following the maximum likelihood
+method of Tegmark et al., we collapse this number density into pixelized values
+\begin{equation}
+    x_i = \int_V d^3r~ \left(\frac{n(\vec{r})}{\nbar} - 1\right) \psi_i(\vec{r})
+\end{equation}
+for some set of mode functions $\psi_i(\vec{r})$.  The expected covariance of
+these pixelized values is
+\begin{align}
+    C_{ij} &= \int_V d^3r_1 \int_V d^3r_2~ \psi_i^*(\vec{r}_1) \psi_j(\vec{r}_2) \xi(\vec{r}_2 - \vec{r}_1) + \int_V d^3r~ \frac{\psi_i^*(\vec{r}) \psi_j(\vec{r})}{\nbar} \\
+           &= V \sum_{\vec{k}} \tilde{\psi}_i^*(\vec{k}) \tilde{\psi}_j(\vec{k}) P(\vec{k}) + \int_V d^3r~ \frac{\psi_i^*(\vec{r}) \psi_j(\vec{r})}{\nbar} \\
+           &\equiv S_{ij} + N_{ij} ,
+\end{align}
+where the sum is over all wavevectors $\vec{k} = \frac{2\pi}{L} (n_x, n_y, n_z)$.
+
+For the mode functions $\psi_i(\vec{r})$ we choose simple plane waves,
+\begin{equation}
+    \psi_i(\vec{r}) = A_i e^{i\vec{k}_i \cdot \vec{r}},
+\end{equation}
+for some set of wavevectors $\{ \vec{k}_i \}$.  The Fourier transform of this
+function is a Kronecker delta
+($\tilde{\psi}_i(\vec{k}) = A_i \delta_{\vec{k}_i, \vec{k}}$) so we find
+\begin{equation}
+    C_{ij} = \delta_{ij} V A_i^2 \left( P(\vec{k}_i) + \frac{1}{\nbar} \right).
+\end{equation}
+In this case the pixelized values $x_i$ are just the Fourier coefficients of
+the density contrast $\delta(\vec{r}) = n(\vec{r})/\nbar - 1$,
+\begin{equation}
+    x_i = V A_i \tilde{\delta}_{\vec{k}_i} .
+\end{equation}
+
+We take our model power spectrum to be a piecewise-constant function
+\begin{equation}
+    P(k) = \sum_m p_m \theta(K_m \le k < K_{m+1}),
+\end{equation}
+where $p_m$ represents the average band power over the interval
+$[K_m,K_{m+1}]$.  We then define the quadratic estimator
+\begin{equation}
+    \hat{p}_m = \mat{x}^T \mat{Q}_m \mat{x} - \Tr[\mat{Q}_m \mat{N}]
+\end{equation}
+where $\mat{x}$ is a column vector with components $x_i$, $\mat{N}$ is the
+noise matrix with components $N_{ij} = \delta_{ij} V A_i^2 \frac{1}{\nbar}$,
+and $\mat{Q}_m$ is given by
+\begin{equation}
+    \mat{Q}_m = \frac{1}{2} \sum_n M_{mn} \mat{C}^{-1} \mat{C}_{,n} \mat{C}^{-1}
+\end{equation}
+In terms of components we have
+\begin{equation}
+    C_{m,ij} = \delta_{ij} V A_i^2 \theta(K_n \le |\vec{k}_i| < K_{n+1}).
+\end{equation}
+
+The matrix $M_{mn}$ is arbitrary, except that it should be normalized so that
+$\hat{p}_m$ gives a sensible estimate of the actual band power $p_m$.  This
+translates to the requirement that the rows of the matrix $MF$ sum to 1, i.e.
+\begin{equation}
+    \sum_n (M F)_{mn} = 1,
+\end{equation}
+where $F_{mn}$ is the Fisher matrix,
+\begin{align}
+    F_{mn} &= \frac{1}{2} \Tr[\mat{C}^{-1} \mat{C}_{,m} \mat{C}^{-1} \mat{C}_{,n}] \\
+        &= \frac{1}{2} \Tr\left[ \delta_{ij} \theta(K_m \le |\vec{k}_i| < K_{m+1}) \theta(K_n \le |\vec{k}_i| < K_{n+1}) \left(P(\vec{k}_i) + 1/\nbar\right)^{-2} \right] \\
+        &= \delta_{mn}~ \frac{\mathcal{N}_m}{2} \left(p_m + 1/\nbar \right)^{-2},
+\end{align}
+and $\mathcal{N}_m$ is the number of wavevectors $\vec{k}_i$ lying in the
+interval $K_m \le |\vec{k}_i| < K_{m+1}$.  Since $F_{mn}$ is diagonal, we can
+(but don't necessarily have to) take $M_{mn}$ to be diagonal as well, in which
+case the normalization requirement forces
+\begin{equation}
+    M_{mn} = (F^{-1})_{mn} = \delta_{mn}~ \frac{2}{\mathcal{N}_m} \left(p_m + 1/\nbar \right)^2 .
+\end{equation}
+
+Putting everything together we find
+\begin{align}
+    \hat{p}_m
+        &= \sum_{ij} V A_i \tilde{\delta}^*_{\vec{k}_i} \cdot \delta_{ij} \frac{1}{V A_i^2} \frac{1}{\mathcal{N}_m} \theta(K_m \le |\vec{k}_i| < K_{m+1}) \cdot V A_j \tilde{\delta}_{\vec{k}_j} - \frac{1}{\nbar} \\
+        &= V~ \frac{1}{\mathcal{N}_m} \sum_{\vec{k} \in S_m} |\tilde{\delta}_{\vec{k}}|^2 - \frac{1}{\nbar}, \\
+    \langle \hat{p}_m \rangle
+        &= p_m, \\
+    \Cov[\hat{p}_m,\hat{p}_n]
+        &= 2 \Tr[\mat{Q}_m C \mat{Q}_n C] \\
+        &= \delta_{mn}~ \frac{2}{\mathcal{N}_m} (p_n + 1/\nbar)^2
+\end{align}
+where $S_m = \{ \vec{k}_i : K_m \le |\vec{k}_i| < K_{m+1} \}$ includes all
+wavevectors lying in the $m$th shell.  This is exactly the estimator and error
+properties we expect for such an ideal survey.
+
+\end{document}

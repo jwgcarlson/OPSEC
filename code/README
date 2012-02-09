@@ -1,0 +1,12 @@
+Build instructions for OPSEC.
+
+Quick start:
+* To build:
+    $ cp setup.sh.example setup.sh
+    $ # Edit setup.sh and set appropriate environment variables
+    $ ./build.sh all
+* To clean:
+    $ ./clean.sh all
+* To distclean:
+    $ ./clean.sh -d all
+

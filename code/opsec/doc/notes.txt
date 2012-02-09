@@ -1,0 +1,16 @@
+Implementation notes:
+
+- In the ComputeLocalSignalMatrix() routine, I now take advantage of the fact
+that the signal matrices are symmetric by not recomputing $S_{ab}$ if $S_{ba}$
+has already been computed locally.  This might not seem like a very significant
+optimization when spread over many processes, since only nloc*(nloc-1)/2 out of
+nloc*n matrix element computations are actually eliminated, so that the
+fractional improvement decreases as the number of processes increases.
+However, it is precisely the matrix elements near the diagonal that are the
+most difficult to compute, since these elements tend to represent pairs of
+cells that are spatially close, where the correlation function is most rapidly
+varying.  So the savings introduced by this optimization can be significant.
+
+- Single precision mode (--with-precision=single) hasn't been tested thoroughly
+(or at all).  I can't think of a reason why it shouldn't work, but the need for
+it hasn't arisen yet.

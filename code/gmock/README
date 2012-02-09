@@ -1,0 +1,10 @@
+Simple code to generate a Poisson sampling of a Gaussian random field with
+given power spectrum.
+
+
+gmock: generates mock galaxy catalog by taking a Poisson sampling of a Gaussian
+random density field
+
+gcorr: estimates the observed correlation function for a given cosmology and
+survey geometry by taking repeated Poisson samplings from a Gaussian random
+density field

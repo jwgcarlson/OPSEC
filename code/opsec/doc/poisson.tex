@@ -1,0 +1,194 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{bm}
+
+\parskip 16pt
+\textwidth 6.2in
+\oddsidemargin 0.15in
+
+\newcommand{\nbar}{\bar{n}}
+\renewcommand{\vec}[1]{\bm{#1}}
+\renewcommand{\r}{\vec{r}}
+
+\begin{document}
+
+Let $n(\r)$ denote the galaxy number density field.  Since galaxies are
+discrete objects, this field is a sum of delta functions,
+\begin{equation}
+    n(\r) = \sum_g \delta_D(\r-\r_g).
+\end{equation}
+Averaged over an ensemble of universes, however, the mean number density
+$\nbar(\r) = \langle n(\r) \rangle$ is continuous and non-negative.  (Note that
+in a statistically homogeneous universe, the mean number density should be
+uniform, i.e.~independent of $\r$.  However we treat $n(\r)$ as the
+\emph{observed} number density for some particular survey, which varies with
+position according to the survey's selection criteria.)
+
+The probability of finding a galaxy within an infinitesimal volume $\delta V_1$
+centered at $\r_1$ is
+\begin{equation}
+    \delta P_1 = \nbar(\r_1)~ \delta V_1.
+\end{equation}
+In the absence of clustering, the presence or absense of a second galaxy in a
+disjoint volume $\delta V_2$ at $\r_2$ is independent of the presence or
+absence of the first, so the probability of finding galaxies in both volumes is
+\begin{equation}
+    \label{eq:p2nc}
+    \delta P_2 = \nbar(\r_1) \nbar(\r_2)~ \delta V_1 \delta V_2.
+\end{equation}
+This generalizes to three or more galaxies, e.g.
+\begin{align}
+    \delta P_3 &= \nbar(\r_1) \nbar(\r_2) \nbar(\r_3)~ \delta V_1 \delta V_2 \delta V_3, \\
+    \delta P_4 &= \nbar(\r_1) \nbar(\r_2) \nbar(\r_3) \nbar(\r_4)~ \delta V_1 \delta V_2 \delta V_3 \delta V_4,
+\end{align}
+and so on.  In fact, in the absence of clustering, the mean number density
+gives us everything we can hope to know about the distribution of galaxies.
+The probability of finding $k$ galaxies within the finite volume $V$ in this
+case is given by the Poisson distribution,
+\begin{equation}
+    P[k \text{ galaxies in } V] = \frac{\lambda^k}{k^!} e^{-\lambda}, \qquad \text{ where } \lambda = \int_V \nbar(\r)~ d^3r.
+\end{equation}
+
+Of course, galaxies \emph{do} exhibit clustering.  In the most general case, we
+can characterize this clustering by introducing a series of multi-point
+correlation functions that define deviations from the no-clustering case above.
+Thus, for disjoint infinitesimal volumes $\delta V_i$, the probabilities above
+become
+\begin{align}
+    \delta P_1 &= \nbar(\r_1)~ \delta V_1, \\
+    \delta P_2 &= \nbar(\r_1) \nbar(\r_2)~ \delta V_1 \delta V_2 [1 + \xi_{12}]. \\
+    \delta P_3 &= \nbar(\r_1) \nbar(\r_2) \nbar(\r_3)~ \delta V_1 \delta V_2 \delta V_3[1 + \xi_{12} + \xi_{23} + \xi_{13} + \zeta_{123}], \\
+    \delta P_4 &= \nbar(\r_1) \nbar(\r_2) \nbar(\r_3) \nbar(\r_4)~ \delta V_1 \delta V_2 \delta V_3 \delta V_4 \notag \\
+        & \quad \times [1 + \xi_{12} + \xi_{13} + \xi_{14} + \xi_{23} + \xi_{24} + \xi_{34} + \zeta_{123} + \zeta_{124} + \zeta_{134} + \zeta_{234} \notag \\
+        & \qquad + \xi_{12}\xi_{34} + \xi_{13}\xi_{24} + \xi_{14}\xi_{23} + \eta_{1234}],
+\end{align}
+where $\xi_{12}$ is shorthand for $\xi(\r_1,\r_2)$, etc.  The arrangement of
+terms is chosen so that at each level, the newly introduced $n$-point
+correlation function represents $n$-point clustering \emph{above} what you
+would already expect given knowledge of $(n-1)$-point clustering.  That is,
+$\xi_{12}$ represents the \emph{excess} probability of finding galaxies at
+\emph{both} $\r_1$ and $\r_2$, given what we already know about finding
+galaxies at $\r_1$ or $\r_2$ separately.  Likewise, $\zeta_{123}$ represents
+the excess probability of finding galaxies at $\r_1$, $\r_2$, \emph{and}
+$\r_3$, given what we know about the probability of finding a pair of galaxies
+at $\r_1$ and $\r_2$, or a pair at $\r_2$ and $\r_3$, and so on.
+
+In this way, the statistical properties of galaxy clustering can be
+characterized by a hierarchy of correlation functions, the first three of which
+are denoted $\xi(\r_1,\r_2)$, $\zeta(\r_1,\r_2,\r_3)$, and
+$\eta(\r_1,\r_2,\r_3,\r_4)$.  However, there is one subtlety that has not yet
+been addressed.  We were careful to require above that the volumes $\delta V_i$
+are \emph{disjoint}.  To understand what changes when we remove this
+restriction, it is convenient to imagine partitioning space into a mesh of
+cells, each of equal infinitesimal volume $\delta V$, with units chosen such
+that $\delta V = 1$.  We label each cell by a subscripted index, so that cell
+$a$ is centered at $\r_a$, and the number density averaged over the cell is
+$n_a$, with ensemble average $\langle n_a \rangle = \nbar_a$.  Since the cells
+are infinitesimal, there can be at most one galaxy per cell, thus $n_a$ is
+either 0 or 1.  Additionally, $\nbar_a \ll 1$, since the probability of finding
+a galaxy within an infinitesimal cell is itself infinitesimal.
+
+We now ask what is the probability of finding one galaxy in cell $a$ and one
+galaxy in cell $b$.  If the cells are disjoint, i.e.~if $a \ne b$, then the
+answer is the same as before (remember $\delta V = 1$),
+\begin{equation}
+    P[\text{galaxy in $a$ and galaxy in $b$ } | a \ne b] = \nbar_a \nbar_b (1 + \xi_{ab}).
+\end{equation}
+But if $a = b$, then the question is the same as asking what is the probability
+of finding a galaxy in $a$, so
+\begin{equation}
+    P[\text{galaxy in $a$ and galaxy in $b$ } | a = b] = \nbar_a \delta_{ab},
+\end{equation}
+where $\delta_{ab}$ is the Kronecker delta symbol.  Together, then we have
+\begin{equation}
+    P[\text{galaxy in $a$ and galaxy in $b$ }] = \nbar_a \nbar_b (1 + \xi_{ab}) + \nbar_a \delta_{ab}.
+\end{equation}
+The second term is commonly referred to as a \emph{shot noise} contribution,
+and arises due to the discreteness of galaxies.  (Note that $\nbar_a \ll 1$,
+so when $a = b$ the first term is negligible compared to the second.)
+
+Rather than speaking of probabilities, we can interpret these results in terms
+of correlations between the values of $n_a$ and $n_b$.  The product $n_a n_b$
+will be 1 if there is a galaxy in each cell, and 0 otherwise.  Thus, averaged
+over an ensemble of universes, $\langle n_a n_b \rangle$ gives the probability
+of finding galaxies in both cells $a$ and $b$, i.e.
+\begin{equation}
+    \langle n_a n_b \rangle = \nbar_a \nbar_b (1 + \xi_{ab}) + \nbar_a \delta_{ab}.
+\end{equation}
+In the continuum limit, this expression reads
+\begin{equation}
+    \langle n(\r_1) n(\r_2) \rangle = \nbar(\r_1) \nbar(\r_2) [1 + \xi(\r_1,\r_2)] + \nbar(\r_1) \delta_D(\r_2-\r_1).
+\end{equation}
+
+A similar result holds for the 3-point quantity $\langle n_a n_b n_c \rangle$.
+For this case, we can have all three indices distinct, we can have two of the
+indices equal and the third distinct, or we can have all three indices equal.
+Correspondingly, there are three types of terms,
+\begin{align}
+    \langle n_a n_b n_c \rangle
+        &= \nbar_a \nbar_b \nbar_c (1 + \xi_{ab} + \xi_{ac} + \xi_{bc} + \zeta_{abc}) \notag \\
+        &\quad + \nbar_a \nbar_b (1 + \xi_{ab}) (\delta_{bc} + \delta_{ac}) + \nbar_a \nbar_c (1 + \xi_{ac}) \delta_{ab} \notag \\
+        &\quad + \nbar_a \delta_{abc},
+\end{align}
+where $\delta_{abc}$ is a generalization of the Kronecker delta symbol, equal
+to 1 if $a = b = c$, 0 otherwise.  We have written the second line in an
+unsymmetric fashion so as to minimize the length of the expression; note
+however that, when the Kronecker deltas are taken into account, the expression
+is indeed symmetric under permutations of the indices $a,b,c$.
+
+Finally, for the 4-point quantity $\langle n_a n_b n_c n_d \rangle$, we have
+five types of terms, namely those for which $(i)$ all indices are distinct,
+$(ii)$ there are two pairs of equal indices, $(iii)$ two of the indices are
+equal, but the other two are distinct, $(iv)$ three of the indices are equal,
+distinct from the fourth, and $(v)$ all four indices are equal.  Thus
+\begin{align}
+    \langle n_a n_b n_c n_d \rangle
+        &= \nbar_a \nbar_b \nbar_c \nbar_d(1 + \xi_{ab} + \xi_{ac} + \xi_{ad} + \xi_{bc} + \xi_{bd} + \xi_{cd} + \zeta_{abc} + \zeta_{abd} + \zeta_{acd} + \zeta_{bcd} \notag \\
+        &\qquad\qquad\qquad + \xi_{ab}\xi_{cd} + \xi_{ac}\xi_{bd} + \xi_{ad}\xi_{bc} + \eta_{abcd}) \notag \\
+        &\quad + \nbar_a \nbar_b (1 + \xi_{ab}) (\delta_{ac} \delta_{bd} + \delta_{ad} \delta_{bc}) + \nbar_a \nbar_c (1 + \xi_{ac}) \delta_{ab} \delta_{cd} \notag \\
+        &\quad + [\nbar_a \nbar_b \nbar_c (1 + \xi_{ab} + \xi_{ac} + \xi_{bc} + \zeta_{abc}) (\delta_{ad} + \delta_{bd} + \delta_{cd}) \notag \\
+        &\quad + \;\nbar_a \nbar_b \nbar_d (1 + \xi_{ab} + \xi_{ad} + \xi_{bd} + \zeta_{abd}) (\delta_{ac} + \delta_{bc}) \notag \\
+        &\quad + \;\nbar_a \nbar_c \nbar_d (1 + \xi_{ac} + \xi_{ad} + \xi_{cd} + \zeta_{acd}) \delta_{ab} ] \notag \\
+        &\quad + \nbar_a \nbar_b (1 + \xi_{ab}) (\delta_{acd} + \delta_{bcd}) + \nbar_c \nbar_d (1 + \xi_{cd}) (\delta_{abd} + \delta_{abc}) \notag \\
+        &\quad + \nbar_a \delta_{abcd}.
+\end{align}
+
+More useful expressions:
+\begin{equation}
+    \langle (n_a - \nbar_a) (n_b - \nbar_b) \rangle
+        = \nbar_a \nbar_b \xi_{ab} + \nbar_a \delta_{ab}
+\end{equation}
+\begin{equation}
+    \langle (n_a - \nbar_a) (n_b - \nbar_b) (n_c - \nbar_c) \rangle
+        = \nbar_a \nbar_b \nbar_c \zeta_{abc} + [\nbar_a \nbar_b \xi_{ab} (\delta_{ac} + \delta_{bc}) + \nbar_a \nbar_c \xi_{ac} \delta_{ab}] + \nbar_a \delta_{abc}
+\end{equation}
+\begin{align}
+    \langle (n_a - \nbar_a) (n_b - \nbar_b) (n_c - \nbar_c) (n_d - \nbar_d) \rangle
+        &= \nbar_a \nbar_b \nbar_c \nbar_d (\xi_{ab}\xi_{cd} + \xi_{ac}\xi_{bd} + \xi_{ad}\xi_{bc} + \eta_{abcd}) \notag \\
+        &\quad + \nbar_a \nbar_b \nbar_c (\xi_{ab} \delta_{cd} + \xi_{bc} \delta_{ad} + \xi_{ac} \delta_{bd} + \zeta_{abc}(\delta_{ad} + \delta_{bd} + \delta_{cd})) \notag \\
+        &\quad + \nbar_a \nbar_b \nbar_d (\xi_{ad} \delta_{bc} + \xi_{bd} \delta_{ac} + \zeta_{abd}(\delta_{ac} + \delta_{bc})) \notag \\
+        &\quad + \nbar_a \nbar_c \nbar_d (\xi_{cd} \delta_{ab} + \zeta_{acd} \delta_{ab}) \notag \\
+        &\quad + \nbar_a \nbar_b ((1 + \xi_{ab})(\delta_{ac} \delta_{bd} + \delta_{ad} \delta_{bc}) + \xi_{ab} (\delta_{acd} + \delta_{bcd})) \notag \\
+        &\quad + \nbar_a \nbar_c ((1 + \xi_{ac}) \delta_{ab} \delta_{cd} + \xi_{ac} \delta_{abd}) \notag \\
+        &\quad + \nbar_a \nbar_d \xi_{ad} \delta_{abc} \notag \\
+        &\quad + \nbar_a \delta_{abcd}
+\end{align}
+\begin{align}
+    & \langle (n_a - \nbar_a) (n_b - \nbar_b) (n_c - \nbar_c) (n_d - \nbar_d) \rangle - \langle (n_a - \nbar_a) (n_b - \nbar_b) \rangle \langle (n_c - \nbar_c) (n_d - \nbar_d) \rangle \notag \\
+        &= \nbar_a \nbar_b \nbar_c \nbar_d (\xi_{ac}\xi_{bd} + \xi_{ad}\xi_{bc} + \eta_{abcd}) \notag \\
+        &\quad + \nbar_a \nbar_b \nbar_c (\xi_{bc} \delta_{ad} + \xi_{ac} \delta_{bd} + \zeta_{abc}(\delta_{ad} + \delta_{bd} + \delta_{cd})) \notag \\
+        &\quad + \nbar_a \nbar_b \nbar_d (\xi_{ad} \delta_{bc} + \xi_{bd} \delta_{ac} + \zeta_{abd}(\delta_{ac} + \delta_{bc})) \notag \\
+        &\quad + \nbar_a \nbar_c \nbar_d \zeta_{acd} \delta_{ab} \notag \\
+        &\quad + \nbar_a \nbar_b ((1 + \xi_{ab})(\delta_{ac} \delta_{bd} + \delta_{ad} \delta_{bc}) + \xi_{ab} (\delta_{acd} + \delta_{bcd})) \notag \\
+        &\quad + \nbar_a \nbar_c (\xi_{ac} \delta_{ab} \delta_{cd} + \xi_{ac} \delta_{abd}) \notag \\
+        &\quad + \nbar_a \nbar_d \xi_{ad} \delta_{abc} \notag \\
+        &\quad + \nbar_a \delta_{abcd} \\
+        &= (\nbar_a \nbar_c \xi_{ac} + \nbar_a \delta_{ac}) (\nbar_b \nbar_d \xi_{bd} + \nbar_b \delta_{bd})
+         + (\nbar_a \nbar_d \xi_{ad} + \nbar_a \delta_{ad}) (\nbar_b \nbar_c \xi_{bc} + \nbar_b \delta_{bc}) \notag \\
+        &\quad + \nbar_a \nbar_b \nbar_c \nbar_d \eta_{abcd} \notag \\
+        &\quad + \nbar_a \nbar_b \nbar_c \zeta_{abc}(\delta_{ad} + \delta_{bd} + \delta_{cd}) + \nbar_a \nbar_b \nbar_d \zeta_{abd} (\delta_{ac} + \delta_{bc}) + \nbar_a \nbar_c \nbar_d \zeta_{acd} \delta_{ab} \notag \\
+        &\quad + \nbar_a \nbar_b \xi_{ab} (\delta_{ac} \delta_{bd} + \delta_{ad} \delta_{bc} + \delta_{acd} + \delta_{bcd}) + \nbar_a \nbar_c \xi_{ac} (\delta_{ab} \delta_{cd} + \delta_{abd}) + \nbar_a \nbar_d \xi_{ad} \delta_{abc} \notag \\
+        &\quad + \nbar_a \delta_{abcd}
+\end{align}
+
+\end{document}

@@ -1,0 +1,24 @@
+This is OPSEC: an Optimal Power Spectrum Estimator Code.
+
+
+Quick start for OPSEC:
+
+- From the top level directory, edit opsecrc.sh and make any necessary changes.
+  In particular, choose the installation directory OPSEC_ROOT.  The default is
+  to build and install OPSEC in place (i.e. with OPSEC_ROOT set to the location
+  of this README file).
+
+- Source opsecrc.sh to set the appropriate environment variables.
+  $ . opsecrc.sh
+
+- Change to the code/ directory, and follow the README there for building OPSEC
+  and its dependent libraries.  This will produce the following directory
+  structure under $OPSEC_ROOT:
+    $OPSEC_ROOT/bin     : binaries and scripts
+    $OPSEC_ROOT/lib     : libraries
+    $OPSEC_ROOT/include : header files
+
+- Move to the tests/ directory and pick a few test runs to try.
+
+- A manual (minimal at present, but improving) can be found at
+    doc/manual.pdf

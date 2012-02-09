@@ -1,0 +1,1 @@
+SUBDIRS = @my_subdirs@

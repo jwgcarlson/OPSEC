@@ -1,0 +1,136 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+
+\textwidth 6in
+\oddsidemargin 0.25in
+\parindent 12pt
+\parskip 12pt
+
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\textsf{#1}}
+\newcommand{\nbar}{\bar{n}}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Tr}{Tr}
+
+\begin{document}
+
+{\Huge **Incomplete**}
+
+\section*{General procedure}
+
+Our input data is a collection of redshift-space galaxy positions
+$(s_g,\theta_g,\phi_g)$ for $1 \le g \le N_\text{galaxies}$.  We collect this
+data into a (redshift-space) galaxy number density
+\begin{equation}
+    n(\vec{s}) = \sum_g \delta_D(\vec{s} - \vec{s}_g),
+\end{equation}
+where $\delta_D$ is the Dirac delta function.  According to the standard
+assumption, these galaxy positions are determined by a Poisson point process
+with intensity function $\nbar (1 + \delta_g)$, where the galaxy density
+contrast $\delta_g$ is linearly related to the underlying matter density
+contrast $\delta$ on large scales.  Since we are only interested in the
+large-scale behavior of $n(\vec{s})$, we project it onto a subspace spanned
+by a suitable set of smooth functions over the survey volume $V$.
+
+We introduce the standard inner product for functions over $\mathbb{R}^3$,
+\begin{equation}
+    (f, g) \equiv \int d^3x~ f(\vec{x}) g(\vec{x})
+\end{equation}
+We choose a set of basis functions $\{\phi_a(\vec{s})\}$ that span a reasonable
+space of smooth functions over $V$, with $a \le 1 \le N_\text{basis}$, and
+define basis pixels
+\begin{equation}
+    x_a \equiv (n, \phi_a)
+        = \int d^3s~ n(\vec{s}) \phi_a(\vec{s})
+        = \sum_g \phi_a(\vec{s}_g).
+\end{equation}
+
+Following the standard assumptions, we have
+\begin{align}
+    \langle n(\vec{s}) \rangle &= \nbar(\vec{s}), \\
+    \langle n(\vec{s}_1) n(\vec{s}_2) \rangle &= \nbar(\vec{s}_1) \nbar(\vec{s}_2) [1 + \xi_g(\vec{s}_1,\vec{s}_2)] + \nbar(\vec{s}_1) \delta_D(\vec{s}_2 - \vec{s}_1).
+\end{align}
+where $\xi_g(\vec{s}_1,\vec{s}_2)$ is the (wide-angle, redshift-space) galaxy
+correlation function.  The covariance of the pixel values $x_a$ is therefore
+\begin{align}
+    \Cov[x_a,x_b]
+        &= \int d^3s_1~ d^3s_2~ \phi_a(\vec{s}_1) \phi_b(\vec{s}_2) \nbar(\vec{s}_1) \nbar(\vec{s}_2) \xi_g(\vec{s}_1,\vec{s}_2) + \int d^3s~ \phi_a(\vec{s}) \phi_b(\vec{s}) \nbar(\vec{s}) \\
+        &\equiv S_{ab} + N_{ab}.
+\end{align}
+The first contribution $S_{ab}$ carries the cosmologically interesting signal,
+while the second contribution $N_{ab}$ is simply Poisson noise.
+
+While our original set of basis functions $\{\phi_a(\vec{s})\}$ may be chosen
+arbitrarily, we are primarily interested in integral combinations of the galaxy
+density that carry the most cosmological signal.  To that end, we first carry
+out a Karhunen-Lo\`{e}ve transform to obtain a more suitable basis.  Let
+$\{\lambda_i\}$ and $\{\vec{b}_i\}$ be the complete set of real eigenvalues and
+orthonormal eigenvectors of the generalized eigenvalue problem $\mat{S} \vec{b}
+= \lambda \mat{N} \vec{b}$, arranged in order of decreasing eigenvalue.  (A
+complete set of such eigenvalues/eigenvectors is guaranteed to exist since $S$
+is symmetric and $N$ is a positive definite matrix.  By ``orthonormal'' we mean
+with respect to the noise matrix, i.e. $\vec{b}_i^T N \vec{b}_j =
+\delta_{ij}$.)  Define a new basis of functions $\{\psi_i(\vec{s})\}$ by
+\begin{equation}
+    \psi_i(\vec{s}) = \sum_{a=1}^{N_\text{basis}} b_{i,a} \phi_a(\vec{s}),
+\end{equation}
+Then the new pixels defined by
+\begin{equation}
+    y_i \equiv (n, \psi_i) = \int d^3s~ n(\vec{s}) \psi_i(\vec{s}) = \sum_g \psi_i(\vec{s}_g)
+\end{equation}
+have covariance
+\begin{equation}
+    \Cov[y_i,y_j] = \delta_{ij} (1 + \lambda_i),
+\end{equation}
+so that the eigenvalue $\lambda_i$ measures the signal-to-noise ratio.
+
+We refer to the functions $\psi_i$ as ``mode functions'' or ``KL mode
+functions,'' and call the set of these mode functions the ``KL basis.'' Since
+all we have done so far is perform a change of basis, we have lost no
+information about the cosmological signal.  However, since the mode functions
+are arranged in order of decreasing signal-to-noise, most of the interesting
+signal is confined to the first several modes (where ``several'' may of course
+be a large number, but hopefully is small compared to $N_\text{basis}$).  We
+achieve a substantial data compression by simply discarding those modes with
+lowest signal-to-noise ratio.  That is, we restrict the index $i$ to run only
+from 1 to some $N_\text{modes}$.  We let $\mat{B}$ be the $N_\text{modes}
+\times N_\text{basis}$ matrix with the eigenvectors $\vec{b}_i$ as rows, i.e.~
+$B_{ia} = b_{i,a}$.  This matrix serves as a projection operator from the
+original space of smooth functions to the KL subspace: 
+$y_i = \sum_a B_{ia} x_a$ and $\Cov[y_i,y_j] = \sum_{a,b} B_{ia} B_{jb} \Cov[x_a,x_b]$.
+
+
+\section*{Count-in-cell basis}
+
+From the definitions of the pixels $x_a$ and the matrices $S_{ab}$ and
+$N_{ab}$, we see that the basis functions $\phi_a(\vec{s})$ are always
+multiplied by a factor of the selection function $\nbar(\vec{s})$, and
+therefore the values of the basis functions outside the survey volume are
+irrelevant.  In order to get the most out of our basis, without including
+members, we should choose our functions $\phi_a$ to vanish outside the survey
+volume.  Since modern surveys tend to have rather complicated angular
+boundaries, the simplest way to enforce this constraint is to partition our
+survey into a collection of discrete cells $V_a$, and choose our basis functions
+to be indicator functions over these cells, i.e.
+\begin{equation}
+    \phi_a(\vec{s}) =
+    \begin{cases}
+        \bar{\phi}_a, & \vec{s} \in V_a, \\
+        0, & \text{otherwise}.
+    \end{cases}
+\end{equation}
+The constant value $\bar{\phi}_a$ is of course arbitrary, but we can achieve a
+significant simplification if we choose $\bar{\phi}_a = \bar{N}_a^{-1/2}$ where
+\begin{equation}
+    \bar{N}_a = \int_{V_a} d^3s~ \nbar(\vec{s}),
+\end{equation}
+which fixes the noise matrix to be the identity:
+\begin{equation}
+    N_{ab} = \int d^3s~ \phi_a(\vec{s}) \phi_b(\vec{s}) \nbar(\vec{s}) = \delta_{ab}.
+\end{equation}
+Now the generalized eigenvalue problem $\mat{S} \vec{b} = \lambda \mat{N} \vec{b}$
+reduces to the regular one, $\mat{S} \vec{b} = \lambda \vec{b}$.
+
+\end{document}

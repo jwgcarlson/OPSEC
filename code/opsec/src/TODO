@@ -1,0 +1,11 @@
+- allow for multi-file reading/writing in abn code, i.e. to split large files
+  up into multiple smaller files
+- write more unit tests (especially for models)
+- update usage strings in all programs
+- look for possible issues with Spline/XiFunc/SelectionFunc and threads
+- figure out runtime scaling for each program, and write a utility to predict
+  the runtime of a particular configuration
+- allow specifying a configuration prefix on the command line, so that all
+  subsequent configuration options have that prefix stripped (mostly useful
+  for gmock)
+- (LATER) make code more C++ (exception handling, classes for vectors/matrices)

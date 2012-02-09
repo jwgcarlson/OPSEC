@@ -1,0 +1,565 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{color,graphicx}
+\usepackage{hyperref}
+\usepackage{xspace}
+
+\textwidth 6in
+\oddsidemargin 0.25in
+\parskip 12pt
+\parindent 12pt
+
+\newcommand{\opsec}{\protect{\textrm{OPSEC}}\xspace}
+\newcommand{\version}{\protect{\textrm{v0.1}}\xspace}
+\newcommand{\homepage}{\protect{\texttt{HOMEPAGE}}\xspace}
+\newcommand{\basis}{\protect{\texttt{basis}}\xspace}
+\newcommand{\klt}{\protect{\texttt{klt}}\xspace}
+\newcommand{\comma}{\protect{\texttt{comma}}\xspace}
+\renewcommand{\dot}{\protect{\texttt{dot}}\xspace}
+\newcommand{\estimate}{\protect{\texttt{estimate}}\xspace}
+\newcommand{\eg}{\textit{e.g.}}
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\etal}{\textit{et.~al.}}
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+\renewcommand{\r}{\vec{r}}
+\renewcommand{\phi}{\varphi}
+\newcommand{\RMin}{\mathtt{RMin}}
+\newcommand{\RMax}{\mathtt{RMax}}
+\newcommand{\MuMin}{\mathtt{MuMin}}
+\newcommand{\MuMax}{\mathtt{MuMax}}
+\newcommand{\PhiMin}{\mathtt{PhiMin}}
+\newcommand{\PhiMax}{\mathtt{PhiMax}}
+\newcommand{\Nr}{\mathtt{Nr}}
+\newcommand{\Nmu}{\mathtt{Nmu}}
+\newcommand{\Nphi}{\mathtt{Nphi}}
+\newcommand{\Shat}{\widehat{S}}
+\newcommand{\Nhat}{\widehat{N}}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Var}{Var}
+
+\title{\opsec \version Manual}
+\date{23 August 2011}
+
+\begin{document}
+\maketitle
+
+This manual describes the usage of the \opsec (Optimal Power Spectrum
+Estimation Code).  The complete source code, as well as the latest version of
+this manual, are available at \homepage.
+
+Section \ref{sec:formalism} provides theoretical background to understand
+precisely what it is that \opsec computes.  Section \ref{sec:implementation}
+describes how these theoretical ideas are implemented.  Readers who just want
+to learn how to use the code can skip these sections and move straight to
+Section \ref{sec:build}, which gives instructions on how to compile the \opsec
+code.  Once compiled, Section \ref{sec:quickstart} shows how to perform a full
+estimation run for a simplified problem.  More detailed information about the
+various programs and utilities that comprise \opsec is provided in Section
+\ref{sec:codedetails}.
+
+\tableofcontents
+
+\section{Formalism for Optimal Quadratic Estimators}
+\label{sec:formalism}
+
+\opsec was designed primarily to measure the power spectrum of galaxies,
+specifically for the SDSS-II and SDSS-III catalogs of luminous red galaxies
+(LRGs).  However, the formalism of optimal quadratic estimation that it follows
+is much more general.  With the proper choice of inputs, \opsec can be used to
+estimate any cosmological parameters from the clustering signal of any set of
+astrophysical objects.  In this section we describe this broader formalism from
+a high-level, theoretical point of view.  In later sections we specialize to
+the case of measuring $P(k)$ from the large-scale clustering of galaxies.
+
+To make use of \opsec, only three inputs must be given:
+\begin{enumerate}
+\item The observed number density field $n(\r)$ for a particular tracer
+    (equivalently, a list of positions $\{\r_g\}$).
+\item The expected density $\bar{n}(\r)$ of this tracer in the absence of
+    clustering (usually estimated from the observed positions, taking into
+    account the selection and masks used in the survey).
+\item A model for how the observed 2-point correlation function depends on a
+    set of cosmological parameters $p_n$ ($1 \le n \le N_p$), along with a set
+    of prior estimates $p_n^{(0)}$ for these parameters (usually from previous
+    measurements).
+\end{enumerate}
+These inputs are used to construct optimal estimates $\hat{p}_n$ for the
+parameters $p_n$, as follows.  (The precise sense in which these estimates are
+``optimal'' is described in Section \ref{sec:optimal}.)
+
+First the observed density field $n(\r)$ is collapsed into a set of real-valued
+coefficients $y_i$, by choosing a suitable set of mode functions
+$\psi_i(\r)$, and defining
+\begin{equation}
+    y_i = \int d^3r~ \psi_i(\r) [n(\r) - \bar{n}(\r)].
+\end{equation}
+(Here and in the following, 3-dimensional integrals are to extend only over the
+volume of the survey.)  We refer to these coefficients $y_i$ as ``pixel
+values.''  The optimal choice of the mode functions $\psi_i$ is itself a
+complicated issue, which we address in Section \ref{sec:klmodes}.  For now,
+they may be viewed as an arbritrary set of $N_m$ linearly independent functions
+defined over the survey volume.  Regardless of the choice of mode functions,
+the pixel values $y_i$ have zero mean: $\langle y_i \rangle = 0$.  (This is
+precisely true only if the mean number density is known exactly; if $\bar{n}$
+is estimated from data, this condition will hold only approximately.)
+
+Our tracers are presumed to be discrete objects (\eg~galaxies), and therefore
+their observed clustering pattern is subject to Poisson shot noise:
+\begin{equation}
+    \langle n(\r_1) n(\r_2) \rangle =
+        \bar{n}(\r_1) \bar{n}(\r_2) [1 + \xi(\r_1,\r_2)]
+      + \bar{n}(\r_1) \delta_D(\r_2-\r_1)
+\end{equation}
+where $\delta_D$ is a Dirac delta function and $\xi(\r_1,\r_2)$ is the 2-point
+correlation function.  The covariance of the pixel values can therefore be
+written as the sum of a signal component and a noise component,
+\begin{equation}
+\label{eq:yiyj}
+    \langle y_i y_j \rangle = C_{ij} = S_{ij} + N_{ij},
+\end{equation}
+where
+\begin{align}
+\label{eq:signal}
+    S_{ij} &= \int d^3r_1 \int d^3r_2~ \psi_i(\r_1) \psi_j(\r_2)~ \bar{n}(\r_1) \bar{n}(\r_2)~ \xi(\r_1,\r_2), \\
+\label{eq:noise}
+    N_{ij} &= \int d^3r~ \psi_i(\r) \psi_j(\r)~ \bar{n}(\r).
+\end{align}
+
+We have defined the pixel values to have zero mean, since we are interested
+only in cosmological parameters that depend on the \emph{clustering} of our
+tracers.  Thus the lowest order statistics that can be meaningfully related
+to our parameters are quadratic combinations
+\begin{equation}
+    \hat{p} = A_{ij} y_i y_j + b,
+\end{equation}
+where summation over repeated indices is implied.  We will frequently view
+$A_{ij}$ as the components of a matrix, and $y_i$ as components of a vector,
+and write $\hat{p} = \mat{y}^T \mat{A} \mat{y} + b$.
+
+Under ideal circumstances (see Appendix \ref{sec:optimal} for details and
+caveats), it can be shown that the minimum variance, unbiased quadratic
+estimators for the parameters $p_n$ are
+\begin{equation}
+\label{eq:pm}
+    \hat{p}_m = \sum_n (F^{-1})_{mn} \left(q_n - f_n \right)
+\end{equation}
+where
+\begin{align}
+\label{eq:qn}
+    q_n &= \frac{1}{2} \mat{y}^T \mat{C}^{-1} \mat{C}_{,n} \mat{C}^{-1} \mat{y}, \\
+\label{eq:fn}
+    f_n &= \frac{1}{2} \Tr\left[ \mat{C}^{-1} \mat{C}_{,n} \mat{C}^{-1} \mat{N}\right], \\
+\label{eq:Fmn}
+    F_{mn} &= \frac{1}{2} \Tr\left[ \mat{C}^{-1} \mat{C}_{,m} \mat{C}^{-1} \mat{C}_{,n}\right],
+\end{align}
+and $\mat{C}_{,n}$ denotes the partial derivative
+$\partial \mat{C}/\partial p_n$.  The matrices $\mat{C}$ and $\mat{C}_{,n}$
+here are to be evaluated at $p_n = p_n^{(0)}$, \ie~with the prior parameter
+estimates.  $F_{mn}$ is the Fisher matrix which (as with all minimum variance
+estimators) determines the errors on $\hat{p}_m$,
+\begin{equation}
+    \Cov[\hat{p}_m,\hat{p}_n] = (F^{-1})_{mn}.
+\end{equation}
+
+
+\subsection{Optimal mode functions}
+\label{sec:klmodes}
+
+The choice of the mode functions $\psi_i(\r)$ affects the accuracy of the
+estimates $\hat{p}_n$.  The optimal choice depends on the parameters that are
+to be estimated, the geometry of the survey, and the number density of the
+desired tracers.  Following Tegmark \etal, we choose the mode functions to be
+signal-to-noise eigenmodes.  That is, we choose mode functions so that the
+signal and noise matrices (see Eqs. (\ref{eq:signal}-\ref{eq:noise})) are
+simultaneously diagonal: $S_{ij} = s_i \delta_{ij}$ and $N_{ij} = n_i
+\delta_{ij}$ (no sum on $i$).  Of the infinite number of possible mode
+functions, we choose a finite number $N_m$ having the largest signal-to-noise
+eigenvalue $\lambda_i = s_i/n_i$.
+
+More explicitly, these signal-to-noise eigenmodes are constructed through the
+following procedure.  First, we choose a convenient basis of linearly
+independent functions $\{\phi_a(\r)\}$ defined over the survey geometry, and
+compute the signal and noise matrices in this basis,
+\begin{align}
+    \Shat_{ab} &= \int d^3r \int d^3r'~ \phi_a(\r) \phi_b(\r')~ \bar{n}(\r) \bar{n}(\r')~ \xi(\r,\r'), \\
+    \Nhat_{ab} &= \int d^3r~ \phi_a(\r) \phi_b(\r)~ \bar{n}(\r).
+\end{align}
+Next we solve the generalized eigenvalue problem
+\begin{equation}
+    \mat{\Shat} \mat{b} = \lambda \mat{\Nhat} \mat{b},
+\end{equation}
+obtaining a complete set of eigenvectors $\{\mat{b}_i\}$ and associated
+eigenvalues $\{\lambda_i\}$.  (This is possible since $\Shat_{ab}$ and
+$\Nhat_{ab}$ are real symmetric matrices, and $\Nhat_{ab}$ is
+positive-definite.)  Then the functions
+\begin{equation}
+    \psi_i(\r) = \sum_a b_{ia} \phi_a(\r)
+\end{equation}
+are signal-to-noise eigenmodes.  For convenience, we normalize the $\psi_i$ so
+that they are noise-orthonormal, \ie~so that the noise matrix is the identity:
+$N_{ij} = \delta_{ij}$.  Then the covariance of pixel values in Eq.
+(\ref{eq:yiyj}) becomes simply
+\begin{equation}
+    \langle y_i y_j \rangle = C_{ij} = (1 + \lambda_i) \delta_{ij} \quad \text{(no sum on $i$)}.
+\end{equation}
+
+At this point, there are as many mode functions $\psi_i$ as there are initial
+basis functions $\phi_a$.  However, many of these functions contribute very
+little information to the parameter estimates $\hat{p}_n$, in that the
+expectation of the quadratic combination $y_i^2$ is dominated by noise rather
+than the desired signal.  Thus, by keeping only modes with the largest
+signal-to-noise eigenvalues $\lambda_i$, we can reduce the size of the
+computational problem without sacrificing too much information.  In practice we
+first fix the desired number of modes $N_m$ (the choice of which is informed by
+the desired error properties on our parameter estimates), then sort the
+eigenmodes by their signal-to-noise eigenvalue $\lambda_i$, and keep only the
+top $N_m$ mode functions $\psi_i$.
+
+This procedure is referred to by Tegmark \etal~as \emph{Karhunen-Lo\`{e}ve
+compression}.  The mode functions $\psi_i$ are then referred to as
+Karhunen-Lo\`{e}ve mode functions, or simply KL modes.
+
+
+\subsection{Examples}
+
+\subsection{Derivation of optimal quadratic estimator}
+\label{sec:derivation}
+
+Here we show how the quadratic estimator of Eq. (\ref{eq:pm}) is derived.  As
+our starting point, we note that the true covariance matrix of pixel values
+$C_{ij} = \langle y_i y_j \rangle$ is unknown.  However, if our model is
+accurate and our prior estimates $p_n^{(0)}$ for the unknown parameter values
+$p_n$ are close, then we can expand the true covariance matrix around our prior
+estimate for it,
+\begin{equation}
+    C_{ij} = C_{ij}^{(0)} + \sum_{n=1}^{N_p} C_{ij,n}^{(0)} (p_n - p_n^{(0)}) + \dots,
+\end{equation}
+where $\mat{C}^{(0)}$ and $\mat{C}_{,n}^{(0)}$ are the covariance matrix and
+its derivatives calculated using the prior estimates $p_n^{(0)}$.  We have
+truncated the Taylor expansion at first order, which is a good approximation if
+the prior estimates $p_n^{(0)}$ are close to the true values $p_n$.  (In fact,
+if $\mat{C}$ depends linearly on the $p_n$, this expansion is exact.)
+
+We want to construct estimators
+\begin{equation}
+    \hat{p}_m = A_{mij} y_i y_j + b_m
+\end{equation}
+that are unbiased, $\langle \hat{p}_m \rangle = p_m$, and for which the
+variance is minimized.  (Throughout this section, summation is implied for
+repeated indices $i,j,k,l$, while sums over $m$ or $n$ are always written out
+explicitly.) Given the above Taylor expansion for $C_{ij}$, we have
+\begin{equation}
+    \langle \hat{p}_m \rangle 
+        = A_{mij} \sum_n C_{ij,n}^{(0)} p_n + A_{mij} \left[C_{ij}^{(0)} - \sum_n C_{ij,n}^{(0)} p_n^{(0)}\right] + b_m.
+\end{equation}
+So for $\hat{p}_m$ to be unbiased, the coefficients $A_{mij}$ must satisfy
+\begin{equation}
+    \label{eq:unbias}
+    A_{mij} C_{ij,n}^{(0)} = \Tr\left[\mat{A}_m \mat{C}_{,n}^{(0)}\right] = \delta_{mn},
+\end{equation}
+while $b_m$ is fixed to be
+\begin{equation}
+    b_m = -A_{mij} \left[C_{ij}^{(0)} - \sum_n C_{ij,n}^{(0)} p_n^{(0)}\right] = -\Tr\left[\mat{A}_m \left(\mat{C}^{(0)} - \sum_n \mat{C}_{,n}^{(0)} p_n^{(0)}\right)\right].
+\end{equation}
+
+We now seek to minimize the variance
+\begin{equation}
+    \label{eq:varpm}
+    \Var[\hat{p}_m] = A_{mij} A_{mkl} R_{ijkl}
+\end{equation}
+where we have defined
+\begin{equation}
+    R_{ijkl} = \langle y_i y_j y_k y_l \rangle - \langle y_i y_j \rangle \langle y_k y_l \rangle.
+\end{equation}
+If we assume the pixel values $y_i$ obey Gaussian statistics (see next section
+for more on this assumption), then
+\begin{equation}
+    R_{ijkl} = C_{ik} C_{jl} + C_{il} C_{jk}.
+\end{equation}
+To minimize (\ref{eq:varpm}) subject to the constraint (\ref{eq:unbias}), we
+introduce Lagrange multipliers $\lambda_n$ and define
+\begin{equation}
+    S = A_{mij} A_{mkl} (C_{ik} C_{jl} + C_{il} C_{jk}) + \sum_n \lambda_n \left(A_{mij} C_{ij,n}^{(0)} - \delta_{mn}\right).
+\end{equation}
+Locating the extremum of this quantity yield the conditions
+\begin{align}
+    \frac{\partial S}{\partial A_{mij}} &= A_{mkl} R_{ijkl} + \sum_n \lambda_n C_{ij,n}^{(0)} = 0, \\
+    \frac{\partial S}{\partial \lambda_n} &= A_{mij} C_{ij,n}^{(0)} - \delta_{mn} = 0,
+\end{align}
+which admits the solution
+\begin{equation}
+    \mat{A}_m = \sum_n (F^{-1})_{mn} \frac{1}{2} \mat{C}^{-1} \mat{C}_{,n}^{(0)} \mat{C}^{-1},
+\end{equation}
+where the Fisher matrix $F_{mn}$ is given by Eq.~(\ref{eq:Fmn}).
+
+(depends on true Cij, which is unknown...)
+
+\subsection{Optimality of quadratic estimator}
+\label{sec:optimal}
+
+- Discuss conditions under which estimator is optimal: priors and model are
+close to truth, and (ideally) signal matrix is linear in parameters. \\
+- Show derivation using variance functional and Lagrange multipliers. \\
+- Discuss choice of mixing matrix, explaining how $M$ can help reduce
+correlations while only slightly increasing variance.
+
+
+\section{Implementation Notes}
+\label{sec:implementation}
+
+
+\subsection{Coordinate systems}
+
+\opsec supports two coordinate systems: spherical and Cartesian.  In Cartesian
+mode, positions $\r$ are represented by a triple $(x,y,z)$.  In spherical mode,
+positions are represented by a triple $(r,\mu,\phi)$, where $\mu = \cos\theta$
+is the cosine of the polar angle.  The translation to or from Cartesian
+coordinates is given by
+\begin{gather}
+    x = r \sqrt{1-\mu^2} \cos\phi, \qquad y = r \sqrt{1-\mu^2} \sin\phi, \qquad z = r \mu, \\
+    r = \sqrt{x^2+y^2+z^2}, \qquad \mu = z/r, \qquad \phi = \tan^{-1} y/x.
+\end{gather}
+
+
+\subsection{Cell basis}
+\label{sec:cells}
+
+As explained in Section \ref{sec:klmodes}, in order to compute the KL mode
+functions $\psi_i(\r)$ we must first choose a basis of functions $\phi_a(\r)$
+over the survey geometry.  For \opsec, we partition the survey geometry into a
+mesh of regularly-shaped cells, and choose our basis functions to be constant
+over each cell (\ie~$\phi_a(\r)$ is proportional to the indicator function over
+cell $a$).  A detailed explanation is given below for the case of spherical
+coordinates; the Cartesian case is analagous.
+
+First, a regular bounding region is defined, such that the entire survey fits
+within the region
+\begin{equation}
+    \{(r,\mu,\phi) : \RMin \le r \le \RMax, \MuMin \le \mu \le \MuMax, \PhiMin \le \phi \le \PhiMax\}. \\
+%[\RMin,\RMax]\times[\MuMin,\MuMax]\times[\PhiMin,\PhiMax]
+\end{equation}
+This region is then subdivided into cells, by partitioning each coordinate
+interval into equal subintervals:
+\begin{itemize}
+\item $[\RMin,\RMax]$ is divided into $\Nr$ equal subintervals $[r_d,r_{d+1}]$ for $0 \le d < \Nr$.
+\item $[\MuMin,\MuMax]$ is divided into $\Nmu$ equal subintervals $[\mu_e,\mu_{e+1}]$ for $0 \le e < \Nmu$.
+\item $[\PhiMin,\PhiMax]$ is divided into $\Nphi$ equal subintervals $[\phi_f,\phi_{f+1}]$ for $0 \le f < \Nphi$.
+\end{itemize}
+(See Figure \ref{fig:cells}.)  This subdivision of the bounding region gives
+a grid of $\Nr*\Nmu*\Nphi$ cells, each labeled by a triple $(d,e,f)$:
+\begin{equation}
+    C_{d,e,f} = [r_d,r_{d+1}]\times[\mu_e,\mu_{e+1}]\times[\phi_f,\phi_{f+1}].
+\end{equation}
+Note that, although each cell has the same thickness and the same angular extents,
+\begin{equation}
+    \Delta r = \frac{\RMax-\RMin}{\Nr}, \quad
+    \Delta\mu = \frac{\MuMax-\MuMin}{\Nmu}, \quad
+    \Delta\phi = \frac{\PhiMax-\PhiMin}{\Nphi},
+\end{equation}
+their volumes will differ due to the varying radial positions:
+\begin{equation}
+    V_{d,e,f} = \text{Vol } C_{d,e,f}
+    = \frac{1}{3} (r_{d+1}^3-r_d^3) \Delta\mu \Delta\phi.
+\end{equation}
+(This is true only for the spherical case; for Cartesian coordinates all cells
+are identical.)
+
+Most surveys are not regularly shaped, and consequently many of the cells in
+this grid will be wholly outside of the survey region.  Rather than carrying
+these empty cells through our calculations, we discard them right away.
+Explicitly, we first order the cells within the grid by a grid index
+\begin{equation}
+    G = (d*\Nmu + e)*\Nphi + f, \quad 0 \le G < \Nr*\Nmu*\Nphi.
+\end{equation}
+We then take all $N_\text{cells}$ non-empty cells and label them by a
+consecutive index $a$, $0 \le a < N_\text{cells}$, according to the ordering
+imposed by $G$.  Thus each non-empty cell can be labelled either by the cell
+index $a$, by the grid index $G$, or by the grid coordinates $(d,e,f)$.
+
+For each non-empty cell $C_a$ we compute the number of galaxies expected to lie
+within the cell according to the given selection function,
+\begin{equation}
+    \bar{N}_a = \int_{C_a} d^3r~ \bar{n}(\r).
+\end{equation}
+We also compute the effective volume of the cell, $V_{a,\text{eff}}$, which is
+defined as the volume of the cell for which $\bar{n}(\r)$ is non-vanishing.
+(This isn't used for anything yet.)
+
+For our basis functions, finally, we define
+\begin{equation}
+    \phi_a(\r) = \bar{N}_a^{-1/2} \chi_a(\r) = \begin{cases} \bar{N}_a^{-1/2} & \text{if } \r \in C_a, \\ 0 & \text{otherwise}. \end{cases}
+\end{equation}
+The normalization factor $\bar{N}_a^{-1/2}$ is chosen so that the noise matrix
+is $\Nhat_{ab} = \delta_{ab}$.  The signal matrix in this basis is then given
+by
+\begin{align}
+    \Shat_{ab} &= \bar{N}_a^{-1/2} \bar{N}_b^{-1/2} \int_{C_a} d^3r \int_{C_b} d^3r'~ \bar{n}(\r) \bar{n}(\r')~ \xi(\r,\r') \\
+    &\approx \bar{N}_a^{1/2} \bar{N}_b^{1/2} \int_{C_a} \frac{d^3r}{V_a} \int_{C_b} \frac{d^3r'~}{V_b} \xi(\r,\r').
+\end{align}
+The latter approximation is used in \opsec as it leads to a significant
+optimization (see Appendix \ref{sec:symmetries}); it is a good approximation as
+long as the cells are small compared to the scale of density fluctuations we
+are trying to probe.
+
+\subsection{Surveys}
+\label{sec:survey}
+
+In the \opsec framework, a \emph{survey} is characterized by two pieces of
+information:
+\begin{enumerate}
+\item a \emph{selection function} $\bar{n}(\r)$, which gives the expected
+    number density of galaxies at position $\r$ in the absence of clustering.
+    This function implicitly defines the survey geometry ($\bar{n}(\r) = 0$
+    everywhere outside the survey).
+\item a list of \emph{galaxies} (or other tracers).  A galaxy is defined by
+    its position (either $x,y,z$ in Cartesian mode, or $r,\mu,\phi$ in
+    spherical mode) and by a weight $w$ (used as a fudge factor by survey
+    teams to deal with issues such as fiber collision).
+\end{enumerate}
+A survey in \opsec is implemented as a subclass of the abstract base class
+\texttt{Survey}, declared in \texttt{opsec/src/Survey.h}.  See Section
+\ref{sec:implsurvey} for a more detailed description.
+
+
+\subsection{Models}
+
+In Section \ref{sec:formalism}, we said that the final input that \opsec needs
+is a model for how the observed 2-point correlation function depends on the
+parameters $p_n$, as well as a set of prior estimates $p_n^{(0)}$.  More
+precisely, \opsec requires a prior estimate for the 2-point correlation
+function $\xi(\r_1,\r_2)$, as well as estimates for the functions
+$\xi_{,n}(\r_1,\r_2)$, where as usual commas denote derivatives with respect
+parameters: $\xi_{,n} = \partial \xi/\partial p_n$.  These prior estimates are
+used in the construction of the matrices $\mat{C}$ and $\mat{C}_{,n}$ in
+Eqs. (\ref{eq:qn}), (\ref{eq:fn}), and (\ref{eq:Fmn}).  Explicitly, the signal
+components of these matrices are given by
+\begin{align}
+    S_{ij} &= \int d^3r_1 \int d^3r_2~ \psi_i(\r_1) \psi_j(\r_2)~ \bar{n}(\r_1) \bar{n}(\r_2)~ \xi(\r_1,\r_2), \\
+    S_{ij,n} &= \int d^3r_1 \int d^3r_2~ \psi_i(\r_1) \psi_j(\r_2)~ \bar{n}(\r_1) \bar{n}(\r_2)~ \xi_{,n}(\r_1,\r_2).
+\end{align}
+The prior estimate for $\xi(\r_1,\r_2)$ is also used in the construction of the
+KL mode functions $\psi_i(\r)$.
+
+
+\subsection{Geometry of 2-point clustering}
+
+For a statistically isotropic field (which describes nearly every possible
+field in cosmology, including especially the redshift space galaxy number
+density), the 2-point correlation function $\xi(\r_1,\r_2)$ depends only on
+the geometry of the triangle formed by the observer $\vec{O}$ and the two
+positions $\r_1$, $\r_2$.
+
+Of the many possible ways of parameterizing this geometry, in \opsec we use the
+three distances $r = |\r_2-\r_1|$, $a = |\r_1-\vec{O}|$, and $b=|\r_2-\vec{O}|$
+(see Figure \ref{fig:geometry}).  Thus, the correlation function and its
+derivatives are actually implemented as functions of these three scalars:
+$\xi(\r_1,\r_2) = \xi(r,a,b)$ and $\xi_{,n}(\r_1,\r_2) = \xi_{,n}(r,a,b)$.
+
+\begin{figure}
+\input{figs/geometry.pdf_t}
+\end{figure}
+
+
+\section{Code Usage}
+\label{sec:codeusage}
+
+\subsection{Programs}
+
+The core functionality of \opsec is broken into several independent programs.
+Each program performs a single logical operation, with well-defined input and
+output.  Structuring the code in this way has a number of advantages:
+\begin{itemize}
+\item it's easier to develop, since each program performs a single task or a
+    series of closely related tasks;
+\item it's easier to debug, since each program can be tested individually;
+\item it allows parts of the code to be re-run without having to completely
+    restart the analysis (\eg~the same KL mode functions can be used for
+    different model parameterizations).
+\end{itemize}
+
+In the following subsections we describe each program in more detail.
+
+\subsubsection{\basis}
+
+The \basis program is responsible for producing properly normalized basis
+functions $\phi_a(\r)$.  For input it takes a specification of the survey,
+including its geometry and selection function, and for output it produces a
+list of non-empty cells (see Section \ref{sec:cells}).  A cell is described by
+its cell index $a$, its coordinate bounds (min and max $r$, $\mu$, and $\phi$
+values in the spherical case), and the number of galaxies $\bar{N}_a$ expected
+to lie within the cell.
+
+\subsubsection{\klt}
+
+The \klt program computes the signal-to-noise eigenvalues $\lambda_i$, and
+the corresponding eigenmodes $\psi_i(\r)$ in terms of the basis functions
+$\phi_a(\r)$.
+
+\subsubsection{\comma}
+
+The \comma program computes the derivatives $C_{ij,n}$ of the covariance matrix
+with respect to parameters.
+
+\subsubsection{\dot}
+
+The \dot program computes the pixel values $y_i$ using actual galaxy positions.
+
+\subsubsection{\estimate}
+
+The \estimate program performs the necessary linear algebra operations to
+obtain the minimum variance parameter estimates $\hat{p}_m$.
+
+\subsection{Annotated binary format}
+
+At various points in its operation \opsec needs to store large, dense numerical
+arrays (vectors or matrices) on disk.  A binary format is necessary both to
+minimize disk usage and to ensure fast reading and writing of the data.  \opsec
+uses \emph{annotated binary} files, which generally carry a \texttt{.abn}
+suffix.  A \texttt{.abn} file consists of a text header, followed by a special
+``tag'' line describing the data, followed by the raw binary data itself.  The
+text header can contain arbitrary text, which provides a convenient mechanism
+to document the origins and contents of the data.  The tag line is of the form
+\begin{equation}
+    \texttt{\#!Begin data block: n = N, size = SZ, endian = E, format = FMT}
+\end{equation}
+where \texttt{N} indicates the number of data elements, \texttt{SZ} indicates
+the number of bytes per data element, \texttt{E} is a single character
+indicating whether the binary data is stored in little-endian (\texttt{L}) or
+big-endian (\texttt{B}) form, and \texttt{FMT} is a string that describes the
+intended type for the data elements.  The format string follows the conventions
+of the Python \texttt{struct} module, described here:
+\url{http://docs.python.org/library/struct.html#format-characters}.
+
+\subsection{Configuration files}
+
+\opsec is a fairly flexible system, and as such it needs to read in several
+parameter values so that it knows what to compute.  It reads these values from
+simple ASCII configuration files, usually given a \texttt{.cfg} suffix.  Each
+configuration file is a simple text file consisting of ``name = value'' pairs,
+where blank lines or lines beginning with the `\texttt{\#}' character are
+ignored.
+
+\subsection{Configuration options for \opsec programs}
+
+[List all required/accepted configuration options for each program, with a
+brief explanation of each.]
+
+\subsection{Utility programs}
+
+
+\section{Code Details}
+\label{sec:codedetails}
+
+
+\section{Building and Running \opsec}
+\label{sec:build}
+
+
+\begin{appendix}
+
+\end{appendix}
+
+\end{document}

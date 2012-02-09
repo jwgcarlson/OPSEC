@@ -1,0 +1,27 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{bm}
+
+\renewcommand{\vec}[1]{\bm{#1}}
+\renewcommand{\phi}{\varphi}
+\newcommand{\nbar}{\bar{n}}
+\newcommand{\Nbar}{\bar{N}}
+
+\begin{document}
+
+\section*{Miscellaneous formulas}
+
+\begin{gather}
+    \phi_a(\vec{r}) = \Nbar_a^{-1/2} \chi(\vec{r} \in V_a) \\
+    x_a = \int d^3r~ \phi_a(\vec{r}) [n(\vec{r}) - \nbar(\vec{r})] = \Nbar_a^{-1/2} (N_a - \Nbar_a) \\
+    \langle x_a \rangle = 0 \\
+    \langle x_a x_b \rangle = C_{ab} = S_{ab} + N_{ab} \\
+    N_{ab} = \delta_{ab} \\
+    S_{ab} = \int d^3r_1~ d^3r_2~ \nbar(\vec{r}_1) \nbar(\vec{r}_2) \phi_a(\vec{r}_1) \phi_b(\vec{r}_2) \xi(\vec{r}_1,\vec{r}_2)
+           = \Nbar_a^{1/2} \Nbar_b^{1/2} \int_{V_a} \frac{d^3r_1}{V_a} \int_{V_b} \frac{d^3r_2}{V_b}~ \xi(\vec{r}_1,\vec{r}_2) \\
+    y_i = \sum_a B_{ia} x_a \\
+    \langle y_i \rangle = 0 \\
+    \langle y_i y_j \rangle = C_{ij} = \delta_{ij}(1 + \lambda_i) \\
+\end{gather}
+
+\end{document}

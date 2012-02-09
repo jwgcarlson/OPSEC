@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+
+\textwidth 6in
+\oddsidemargin 0.25in
+\parindent 12pt
+\parskip 12pt
+
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\textsf{#1}}
+\newcommand{\nbar}{\bar{n}}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Tr}{Tr}
+
+\begin{document}
+
+The 2-point correlation function depends on the geometry of the triangle formed
+by the origin and the two sample points.  Parameterize this triangle by the
+distance (from the origin) to the first point ($a$), the distance to the second
+point ($b$), and the separation between the points ($s$).  Let the opening angle
+at the origin be $2\theta$, and the other interior angles be $\alpha$ and $\beta$.
+
+Under the plane-parallel approximation, we take the line-of-sight direction to
+be the angle bisector between the two points, i.e. the line that splits the
+opening angle $\theta$.  The following manipulations take us from the fiducial
+geometrical description $(s,a,b)$ to the plane-parallel values $(s,\mu)$, where
+$\mu = \cos\phi$ with $\phi$ the angle between the line-of-sight direction and
+the pair separation.
+
+\begin{gather*}
+    \cos2\theta = \frac{a^2 + b^2 - s^2}{2ab} \\
+    \cos A = \frac{s^2 + b^2 - a^2}{2sb} \\
+    \cos B = \frac{s^2 + a^2 - b^2}{2sa} \\
+    \phi = A + \theta \\
+    \mu = \cos\phi = \cos(A + \theta) = \cos A \cos\theta - \sin A \sin\theta
+\end{gather*}
+
+
+\end{document}

@@ -1,0 +1,1 @@
+- make abn_read() able to read small chunks of data at a time
