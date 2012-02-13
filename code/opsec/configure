@@ -749,12 +749,12 @@ LTLIBOBJS
 UTILITIES
 FFTW2_LIBS
 LIBPNG
+ANASAZI_LIBS
+ANASAZI_CPPFLAGS
 PARPACK_LIBS
 ARPACK_LIBS
 FITSIO_LIBS
 FITSIO_CPPFLAGS
-ANASAZI_LIBS
-ANASAZI_CPPFLAGS
 LAPACK_LIBS
 BLAS_LIBS
 OPENMP_CFLAGS
@@ -899,12 +899,12 @@ with_precision
 enable_openmp
 with_blas
 with_lapack
-with_anasazi_include
-with_anasazi_libs
 with_cfitsio_include
 with_cfitsio_libs
 with_arpack
 with_parpack
+with_anasazi_include
+with_anasazi_libs
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1562,19 +1562,19 @@ Optional Packages:
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
-  --with-precision=PREC   choose single or double precision
+  --with-precision=PREC   choose single or double (default) precision
   --with-blas=<lib>       use BLAS library <lib>
   --with-lapack=<lib>     use LAPACK library <lib>
-  --with-anasazi-include=PATH
-                          path to Anasazi headers
-  --with-anasazi-libs=PATH
-                          linker options for Anasazi library
   --with-cfitsio-include=PATH
                           path to CFITSIO headers
   --with-cfitsio-libs=PATH
                           linker options for CFITSIO
   --with-arpack=PATH      full path to libarpack.a
   --with-parpack=PATH     full path to libparpack.a
+  --with-anasazi-include=PATH
+                          path to Anasazi headers
+  --with-anasazi-libs=PATH
+                          linker options for Anasazi library
 
 Some influential environment variables:
   CC          C compiler command
@@ -19451,6 +19451,7 @@ fi
 done
 
 
+# Decide on precision: single or double.
 
 # Check whether --with-precision was given.
 if test "${with_precision+set}" = set; then :
@@ -21461,101 +21462,6 @@ fi
 
 
 
-# Check whether --with-anasazi-include was given.
-if test "${with_anasazi_include+set}" = set; then :
-  withval=$with_anasazi_include; ANASAZI_CPPFLAGS="-I$withval"
-else
-  ANASAZI_CPPFLAGS=""
-
-fi
-
-
-# Check whether --with-anasazi-libs was given.
-if test "${with_anasazi_libs+set}" = set; then :
-  withval=$with_anasazi_libs; ANASAZI_LIBS="$withval"
-else
-  ANASAZI_LIBS="-lanasazi -lteuchos"
-
-fi
-
-save_CPPFLAGS="$CPPFLAGS"
-save_CXX="$CXX"
-save_LIBS="$LIBS"
-CPPFLAGS="$CPPFLAGS $ANASAZI_CPPFLAGS"
-CXX="$MPICXX"
-LIBS="$LIBS $ANASAZI_LIBS -lm"
-ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-ac_fn_cxx_check_header_compile "$LINENO" "AnasaziBasicSort.hpp" "ac_cv_header_AnasaziBasicSort_hpp" "$ac_includes_default
-
-"
-if test "x$ac_cv_header_AnasaziBasicSort_hpp" = x""yes; then :
-
-else
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Could not find Anasazi headers. Try setting --with-anasazi-include.
-See \`config.log' for more details" "$LINENO" 5 ; }
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Anasazi usability" >&5
-$as_echo_n "checking Anasazi usability... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <AnasaziBasicSort.hpp>
-          #include <Teuchos_ParameterList.hpp>
-#ifdef F77_DUMMY_MAIN
-
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-
-#endif
-int
-main ()
-{
-Teuchos::ParameterList pl;
-          Anasazi::BasicSort<double> sort(pl);
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Could not link against Anasazi library. Try setting --with-anasazi-libs.
-See \`config.log' for more details" "$LINENO" 5 ; }
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-CPPFLAGS="$save_CPPFLAGS"
-CXX="$save_CXX"
-LIBS="$save_LIBS"
-
-
-
-
-
-
 # Check whether --with-cfitsio-include was given.
 if test "${with_cfitsio_include+set}" = set; then :
   withval=$with_cfitsio_include; FITSIO_CPPFLAGS="-I$withval"
@@ -21693,6 +21599,103 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
+
+
+# Check whether --with-anasazi-include was given.
+if test "${with_anasazi_include+set}" = set; then :
+  withval=$with_anasazi_include; ANASAZI_CPPFLAGS="-I$withval"
+else
+  ANASAZI_CPPFLAGS=""
+
+fi
+
+
+# Check whether --with-anasazi-libs was given.
+if test "${with_anasazi_libs+set}" = set; then :
+  withval=$with_anasazi_libs; ANASAZI_LIBS="$withval"
+else
+  ANASAZI_LIBS="-lanasazi -lteuchos"
+
+fi
+
+save_CPPFLAGS="$CPPFLAGS"
+save_CXX="$CXX"
+save_LIBS="$LIBS"
+CPPFLAGS="$CPPFLAGS $ANASAZI_CPPFLAGS"
+CXX="$MPICXX"
+LIBS="$LIBS $ANASAZI_LIBS -lm"
+ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+ac_fn_cxx_check_header_compile "$LINENO" "AnasaziBasicSort.hpp" "ac_cv_header_AnasaziBasicSort_hpp" "$ac_includes_default
+
+"
+if test "x$ac_cv_header_AnasaziBasicSort_hpp" = x""yes; then :
+
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "Could not find Anasazi headers. Try setting --with-anasazi-include.
+See \`config.log' for more details" "$LINENO" 5 ; }
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Anasazi usability" >&5
+$as_echo_n "checking Anasazi usability... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <AnasaziBasicSort.hpp>
+          #include <Teuchos_ParameterList.hpp>
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+Teuchos::ParameterList pl;
+          Anasazi::BasicSort<double> sort(pl);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "Could not link against Anasazi library. Try setting --with-anasazi-libs.
+See \`config.log' for more details" "$LINENO" 5 ; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+CPPFLAGS="$save_CPPFLAGS"
+CXX="$save_CXX"
+LIBS="$save_LIBS"
+
+
+
+
+
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -21713,6 +21716,7 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 
 

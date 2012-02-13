@@ -33,8 +33,9 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-check_PROGRAMS = testabn$(EXEEXT) testcfg$(EXEEXT) testeig$(EXEEXT) \
-	testmv$(EXEEXT) testsig$(EXEEXT)
+check_PROGRAMS = testMyMatrix$(EXEEXT) testabn$(EXEEXT) \
+	testcfg$(EXEEXT) testeig$(EXEEXT) testmv$(EXEEXT) \
+	testsig$(EXEEXT)
 subdir = tests
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -49,6 +50,11 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/opsec_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am_testMyMatrix_OBJECTS = testMyMatrix.$(OBJEXT) CuTest.$(OBJEXT)
+testMyMatrix_OBJECTS = $(am_testMyMatrix_OBJECTS)
+am__DEPENDENCIES_1 =
+testMyMatrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_testabn_OBJECTS = testabn.$(OBJEXT) CuTest.$(OBJEXT)
 testabn_OBJECTS = $(am_testabn_OBJECTS)
 testabn_LDADD = $(LDADD)
@@ -57,7 +63,6 @@ testcfg_OBJECTS = $(am_testcfg_OBJECTS)
 testcfg_LDADD = $(LDADD)
 am_testeig_OBJECTS = testeig.$(OBJEXT) CuTest.$(OBJEXT)
 testeig_OBJECTS = $(am_testeig_OBJECTS)
-am__DEPENDENCIES_1 =
 testeig_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
@@ -90,10 +95,12 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(testabn_SOURCES) $(testcfg_SOURCES) $(testeig_SOURCES) \
-	$(testmv_SOURCES) $(testsig_SOURCES)
-DIST_SOURCES = $(testabn_SOURCES) $(testcfg_SOURCES) \
-	$(testeig_SOURCES) $(testmv_SOURCES) $(testsig_SOURCES)
+SOURCES = $(testMyMatrix_SOURCES) $(testabn_SOURCES) \
+	$(testcfg_SOURCES) $(testeig_SOURCES) $(testmv_SOURCES) \
+	$(testsig_SOURCES)
+DIST_SOURCES = $(testMyMatrix_SOURCES) $(testabn_SOURCES) \
+	$(testcfg_SOURCES) $(testeig_SOURCES) $(testmv_SOURCES) \
+	$(testsig_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -247,6 +254,8 @@ testeig_SOURCES = testeig.cpp CuTest.c
 testeig_LDADD = $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(MPIFLIBS)
 testmv_SOURCES = testmv.cpp CuTest.c
 testmv_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
+testMyMatrix_SOURCES = testMyMatrix.cpp CuTest.c
+testMyMatrix_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 testsig_SOURCES = testsig.cpp
 all: all-am
 
@@ -291,6 +300,9 @@ clean-checkPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+testMyMatrix$(EXEEXT): $(testMyMatrix_OBJECTS) $(testMyMatrix_DEPENDENCIES) 
+	@rm -f testMyMatrix$(EXEEXT)
+	$(CXXLINK) $(testMyMatrix_OBJECTS) $(testMyMatrix_LDADD) $(LIBS)
 testabn$(EXEEXT): $(testabn_OBJECTS) $(testabn_DEPENDENCIES) 
 	@rm -f testabn$(EXEEXT)
 	$(LINK) $(testabn_OBJECTS) $(testabn_LDADD) $(LIBS)
@@ -314,6 +326,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CuTest.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testMyMatrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testabn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testcfg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testeig.Po@am__quote@

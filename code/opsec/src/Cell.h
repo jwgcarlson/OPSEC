@@ -55,6 +55,13 @@
  * structure changes! */
 
 
+/* Coordinate system options */
+enum {
+    CoordSysCartesian = 0,
+    CoordSysSpherical = 1
+};
+
+
 /* Abuse anonymous unions to allow the same struct to represent either a
  * spherical cell or a Cartesian cell. */
 struct Cell {

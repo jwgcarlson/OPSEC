@@ -18,12 +18,6 @@
 #include "sig.h"
 
 
-/* Coordinate system options */
-enum {
-    CoordSysCartesian = 0,
-    CoordSysSpherical = 1
-};
-
 template<class ScalarType>
 class MySignalMatrixOperator : public Anasazi::Operator<ScalarType> {
 public:

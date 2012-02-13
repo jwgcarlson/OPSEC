@@ -69,6 +69,13 @@ static inline bool array_overlap(const T* a, int na, const T* b, int nb) {
     return (x1 == -1) || (x2 == -1);
 }
 
+static inline std::vector<int> irange(int n) {
+    std::vector<int> v(n);
+    for(int i = 0; i < n; i++)
+        v[i] = i;
+    return v;
+}
+
 
 /* MyMultiVec<ScalarType>
  *
@@ -114,6 +121,7 @@ public:
 
     /***** Input/output *******************************************************/
 
+#if 0
     /* Read multi-vector from a .abn file.  All sizes must match.  The binary
      * data is arranged in column-major format, i.e. one full vector after
      * another, so it must be transposed to match the distributed storage
@@ -183,6 +191,7 @@ public:
         if(Ncells_) *Ncells_ = Ncells;
         return modes;
     }
+#endif
 
 
     /***** Accessors **********************************************************/
@@ -513,6 +522,56 @@ public:
         for(int i = 0; i < m; i++)
             for(int j = 0; j < n; j++)
                 C(i,j) = buf[i + m*j];
+    }
+
+    /* Same as above, but reduce result directly to the process of rank p,
+     * instead of doing an all-reduce.  For the sake of optimization, the
+     * matrix C must have exactly the right shape. */
+    void MvTransMvReduce(ScalarType alpha, const Anasazi::MultiVec<ScalarType>& A,
+                         Teuchos::SerialDenseMatrix<int,ScalarType>& C,
+                         int p) const
+    {
+        assert(length == A.GetVecLength());
+        assert(numvecs == C.numCols() && A.GetNumberVecs() == C.numRows());
+        assert(C.stride() == C.numRows());
+
+        const MyMultiVec* pA = dynamic_cast<const MyMultiVec*>(&A);
+        assert(pA != NULL && mylength == pA->mylength);
+
+        int m = pA->GetNumberVecs();
+        int n = numvecs;
+        int k = mylength;
+
+        if(pA->blocks.size() == 1 && this->blocks.size() == 1) {
+            /* Common case: each multi-vector consists of a single block. */
+            const ScalarType* a = pA->block_starts[0];
+            const ScalarType* b = this->block_starts[0];
+            ScalarType* c = C.values();
+            int lda = mylength;
+            int ldb = mylength;
+            int ldc = C.stride();
+            blas.GEMM(Teuchos::TRANS, Teuchos::NO_TRANS, m, n, k, 1, a, lda, b, ldb, 0, c, ldc);
+        }
+        else {
+            /* General case: multiply column-by-column */
+            for(int i = 0; i < m; i++) {
+                const ScalarType* a = pA->vector(i);
+                for(int j = 0; j < n; j++) {
+                    const ScalarType* b = this->vector(j);
+                    C(i,j) = blas.DOT(k, a, 1, b, 1);
+                }
+            }
+        }
+
+#ifdef OPSEC_USE_MPI
+        /* Sum contributions from all processes, gather on root process */
+        if(me == p)
+            MPI_Reduce(MPI_IN_PLACE, C.values(), m*n,
+                       Teuchos::RawMPITraits<ScalarType>::type(), MPI_SUM, p, MPI_COMM_WORLD);
+        else
+            MPI_Reduce(C.values(), NULL, m*n,
+                       Teuchos::RawMPITraits<ScalarType>::type(), MPI_SUM, p, MPI_COMM_WORLD);
+#endif
     }
 
     void MvDot(const Anasazi::MultiVec<ScalarType>& A, std::vector<ScalarType>& c) const {

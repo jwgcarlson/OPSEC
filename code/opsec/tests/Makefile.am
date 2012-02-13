@@ -1,7 +1,7 @@
 CC = $(MPICC)
 CXX = $(MPICXX)
 
-check_PROGRAMS = testabn testcfg testeig testmv testsig
+check_PROGRAMS = testMyMatrix testabn testcfg testeig testmv testsig
 TESTS = $(check_PROGRAMS)
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
@@ -16,5 +16,8 @@ testeig_LDADD = $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(MPI
 
 testmv_SOURCES = testmv.cpp CuTest.c
 testmv_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
+
+testMyMatrix_SOURCES = testMyMatrix.cpp CuTest.c
+testMyMatrix_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 
 testsig_SOURCES = testsig.cpp

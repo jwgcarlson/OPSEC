@@ -6,7 +6,8 @@ F77 = $(MPIF77)
 noinst_LTLIBRARIES = libklpk.la
 
 libklpk_la_SOURCES = \
-    vec3.h Matrix.h MyMultiVec.h MySignalMatrixOperator.h \
+    MyMatrix.hpp MyMultiVec.h MySignalMatrixOperator.h \
+    vec3.h Matrix.h \
     abn.c cfg.c chealpix.c eig.c opsec.c rng.c sig.cpp Cell.cpp QSpline.cpp \
     abn.h cfg.h chealpix.h eig.h opsec.h rng.h sig.h   Cell.h   QSpline.h \
     Spline.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \

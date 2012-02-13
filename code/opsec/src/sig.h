@@ -7,6 +7,8 @@
 #include "Model.h"
 #include "opsec.h"
 
+real ComputeSignalMatrixElement(const Cell& c1, const Cell& c2, const XiFunc& xi);
+
 /* Compute the local nloc-by-n block of the n-by-n signal matrix, starting at
  * row amin.  Assume spherical coordinates, and use azimuthal symmetry to
  * minimize computation. */
