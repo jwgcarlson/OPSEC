@@ -50,10 +50,8 @@
 #  include <Teuchos_RawMPITraits.hpp>
 #endif
 
-#include "abn.h"
-
 template<typename T>
-static inline int sgn(T x) {
+static inline int mysgn(T x) {
     if(x < 0)      return -1;
     else if(x > 0) return +1;
     else           return 0;
@@ -64,8 +62,8 @@ static inline int sgn(T x) {
  * of memory region b.  And vice versa to test if b straddles a. */
 template<typename T>
 static inline bool array_overlap(const T* a, int na, const T* b, int nb) {
-    int x1 = sgn(b - a) * sgn(b - a - na);
-    int x2 = sgn(a - b) * sgn(a - b - nb);
+    int x1 = mysgn(b - a) * mysgn(b - a - na);
+    int x2 = mysgn(a - b) * mysgn(a - b - nb);
     return (x1 == -1) || (x2 == -1);
 }
 
@@ -117,81 +115,6 @@ public:
     ~MyMultiVec() {
         /* Cleanup should be automatic */
     }
-
-
-    /***** Input/output *******************************************************/
-
-#if 0
-    /* Read multi-vector from a .abn file.  All sizes must match.  The binary
-     * data is arranged in column-major format, i.e. one full vector after
-     * another, so it must be transposed to match the distributed storage
-     * layout of the multi-vector. */
-    void ReadFromFile(const char* filename) {
-        int n;  // length of vector
-        int m;  // number of vectors
-        real* modes = NULL;
-        int nread;
-
-        int nprocs = 1, me = 0;
-#ifdef OPSEC_USE_MPI
-        MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-        MPI_Comm_rank(MPI_COMM_WORLD, &me);
-#endif
-
-        if(me == 0) {
-            /* Read in spectrum from file */
-            FILE* fp = fopen(modefile, "r");
-            if(fp == NULL) {
-                fprintf(stderr, "ReadModesHeader: could not open file '%s'\n", modefile);
-                return NULL;
-            }
-
-            size_t n, size;
-            Config opts = cfg_new();
-            int err = abn_read_header(fp, &n, &size, NULL, NULL, opts);
-            int Nmodes = cfg_get_int(opts, "Nmodes");
-            int Ncells = cfg_get_int(opts, "Ncells");
-            cfg_destroy(opts);
-
-            if(err || Nmodes <= 0 || Ncells <= 0 || n != Nmodes*Ncells || size != sizeof(double)) {
-                fprintf(stderr, "ReadModesHeader: error reading '%s'\n", modefile);
-                fclose(fp);
-                return NULL;
-            }
-
-            if(fp != NULL) {
-                modes = (real*) opsec_malloc(Nmodes*Ncells*sizeof(real));
-                if(modes == NULL)
-                    fprintf(stderr, "ReadModes: could not allocate %zd bytes of memory\n", Nmodes*Ncells*sizeof(real));
-                else {
-                    if(fread(modes, sizeof(real), Nmodes*Ncells, fp) != Nmodes*Ncells) {
-                        fprintf(stderr, "ReadModes: error reading data from '%s'\n", modefile);
-                        free(modes);
-                        modes = NULL;
-                    }
-                }
-                fclose(fp);
-            }
-        }
-
-#ifdef OPSEC_USE_MPI
-        /* Broadcast spectrum to other processes */
-        if(usempi) {
-            MPI_Bcast(&Nmodes, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&Ncells, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            if(Nmodes > 0) {
-                if(me != 0)
-                    modes = (real*) opsec_malloc(Nmodes*Ncells*sizeof(real));
-                MPI_Bcast(modes, Nmodes*Ncells, REAL_MPI_TYPE, 0, MPI_COMM_WORLD);
-            }
-        }
-#endif
-
-        if(Nmodes_) *Nmodes_ = Nmodes;
-        if(Ncells_) *Ncells_ = Ncells;
-        return modes;
-    }
-#endif
 
 
     /***** Accessors **********************************************************/
