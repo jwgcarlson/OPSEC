@@ -1,14 +1,21 @@
+#ifdef HAVE_CONFIG_H
+#  include <opsec_config.h>
+#endif
+
 #include <cassert>
 #include <cmath>
 #include <cstring>
 
+#include "SeparationFunc.h"
 #include "TestModel.h"
+#include "XiFunc.h"
 
 #define DEFINE_TEST_XI(Name, formula) \
 struct Name : public XiFuncImpl { \
     double A, b; \
     Name(double A_, double b_) : A(A_), b(b_) {} \
-    double xi(double r, double, double) const { \
+    double xi(const Point& p1, const Point& p2, const SeparationFunc& sep) { \
+        double r = sep.r(p1, p2); \
         return formula; \
     } \
 };

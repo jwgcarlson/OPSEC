@@ -20,6 +20,67 @@ static inline T mysum(int n, T* x, int incx) {
     return sum;
 }
 
+/* Convenience class for keeping track of indices for packed matrices.
+ * Currently it only handles upper triangular (column-major) matrices, but it
+ * can be trivially modified to support other cases. */
+struct PackedMatrixIndex {
+    explicit PackedMatrixIndex(int n_) {
+        n = n_;
+        k = i = j = 0;
+    }
+
+    PackedMatrixIndex(int n_, int k_) {
+        n = n_;
+        set(k_);
+    }
+
+    void set(int knew) {
+        k = knew;
+        i = j = 0;
+        while(j*(j+1)/2 < k)
+            ++j;
+        while(j*(j+1)/2 + i < k)
+            ++i;
+    }
+
+    void update(int knew) {
+        while(k < knew) {
+            /* Count up to knew */
+            ++i;
+            if(i > j) {
+                ++j;
+                i = 0;
+            }
+            ++k;
+        }
+        while(k > knew) {
+            /* Count down to knew */
+            --i;
+            if(i < 0) {
+                --j;
+                i = j;
+            }
+            --k;
+        }
+    }
+
+    PackedMatrixIndex& operator=(int knew) { set(knew); return *this; }
+    PackedMatrixIndex& operator+=(int dk) { update(k + dk); return *this; }
+    PackedMatrixIndex& operator-=(int dk) { update(k - dk); return *this; }
+    PackedMatrixIndex& operator++() { update(k + 1); return *this; }
+    PackedMatrixIndex& operator--() { update(k - 1); return *this; }
+    operator int() { return k; }
+//    bool operator<(int x) { return (k < x); }
+//    bool operator<=(int x) { return (k <= x); }
+//    bool operator==(int x) { return (k == x); }
+//    bool operator>=(int x) { return (k >= x); }
+//    bool operator>(int x) { return (k > x); }
+
+    int n;      // size of matrix (n-by-n)
+    int k;      // index into packed array of matrix elements [0 <= k < n*(n+1)/2]
+    int i, j;   // matrix indices corresponding to packed index k
+};
+
 /* Matrix storage order */
 enum {
     ColumnMajor = 0,
@@ -329,13 +390,24 @@ struct MyMatrix : public Teuchos::BLAS<int,ScalarType> {
         assert(values != NULL);
 #endif
         for(int i = 0; i < m; i++) {
+            os << ((i == 0) ? "[" : " ") << "[ ";
             for(int j = 0; j < n; j++)
                 os << element(i,j) << " ";
-            os << std::endl;
+            os << "]" << ((i == m-1) ? "]" : "") << std::endl;
         }
     }
 };
 
+
+/* Vector-vector addition */
+template<class ScalarType>
+void axpy(ScalarType alpha, const MyVector<ScalarType>& x, MyVector<ScalarType>& y) {
+#ifdef OPSEC_DEBUG
+    assert(x.values != NULL && y.values != NULL && x.n == y.n);
+#endif
+    Teuchos::BLAS<int,ScalarType> blas;
+    blas.AXPY(x.n, alpha, x, x.inc, y, y.inc);
+}
 
 /* Vector inner product */
 template<class ScalarType>
@@ -457,7 +529,7 @@ void sqrtm(const MyMatrix<ScalarType>& A, MyMatrix<ScalarType>& B) {
 /* Invert the square matrix A, storing the result in B.  It is okay if B points
  * to the same memory as A.  */
 template<class ScalarType>
-void inv(const MyMatrix<ScalarType>& A, MyMatrix<ScalarType>& B) {
+void inverse(const MyMatrix<ScalarType>& A, MyMatrix<ScalarType>& B) {
 #ifdef OPSEC_DEBUG
     assert(A.values != NULL && A.m == A.n);
     assert(B.values != NULL && B.m == A.m && B.n == A.n && B.storage == A.storage);

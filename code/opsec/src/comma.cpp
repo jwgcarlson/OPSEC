@@ -31,6 +31,8 @@ using std::vector;
 
 #include "Cell.h"
 #include "Model.h"
+#include "Survey.h"
+#include "XiFunc.h"
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
@@ -150,11 +152,16 @@ int main(int argc, char* argv[]) {
         Nz = cfg_get_int(cfg, "Nz");
     }
 
-    /* Get model */
+    /* Load model */
     Model* model = InitializeModel(cfg);
     if(!model)
         opsec_exit(1);
     Nparams = model->NumParams();
+
+    /* Load survey */
+    Survey* survey = InitializeSurvey(cfg);
+    if(!survey)
+        opsec_exit(1);
 
     /* Read cells from file */
     Cell* cells = ReadCells(cellfile, &Ncells);
@@ -203,11 +210,6 @@ int main(int argc, char* argv[]) {
      * the full matrices out to file. */
 
 
-    /* Initialize correlation functions */
-    vector<XiFunc> xip(Nparams);        // xip[m] = $\xi_{,m}$
-    for(int m = 0; m < Nparams; m++)
-        xip[m] = model->GetXiDeriv(m);
-
     /* For single file output, prepare header */
     if(!multifile && me == 0) {
         fout = fopen(covfile, "wb");
@@ -224,6 +226,7 @@ int main(int argc, char* argv[]) {
         cfg_set_int(opts, "Nmodes", Nmodes);
         cfg_set_int(opts, "Nparams", Nparams);
         abn_write_header(fout, Nparams*Nmodes*Nmodes, "d", opts);
+//        abn_write_header(fout, Nparams*Nmodes*(Nmodes+1)/2, "d", opts);
         cfg_destroy(opts);
     }
 
@@ -245,6 +248,8 @@ int main(int argc, char* argv[]) {
             printf(" Parameter %d/%d\n", m+1, Nparams);
             fflush(stdout);
         }
+
+        XiFunc xi = model->GetXiDeriv(m);
 
         /* For multi-file output, prepare mth output file */
         if(multifile && me == 0) {
@@ -277,9 +282,9 @@ int main(int argc, char* argv[]) {
         /* Compute local block of the matrix $C_{ab,m}$ in cell basis */
         real* S = NULL;
         if(coordsys == "spherical")
-            S = ComputeSignalMatrixS(Ncells, nloc, amin, cells, Nr, Nmu, Nphi, xip[m]);
+            S = ComputeSignalMatrixS(Ncells, nloc, amin, cells, Nr, Nmu, Nphi, xi, survey);
         else if(coordsys == "cartesian")
-            S = ComputeSignalMatrixC(Ncells, nloc, amin, cells, Nx, Ny, Nz, xip[m]);
+            S = ComputeSignalMatrixC(Ncells, nloc, amin, cells, Nx, Ny, Nz, xi, survey);
 
         if(me == 0) {
             printf("  Projecting onto KL basis...\n");
@@ -355,6 +360,11 @@ int main(int argc, char* argv[]) {
         /* Write matrix to file */
         if(me == 0)
             fwrite(Sp, sizeof(double), Nmodes*Nmodes, fout);
+//        /* Write upper-triangular portion (in column-major arrangement) to file */
+//        if(me == 0) {
+//            for(int j = 0; j < Nmodes; j++)
+//                fwrite(&Sp[j*Nmodes], sizeof(real), j+1, fout);
+//        }
 
         free(S);
         free(Sp);
@@ -371,6 +381,7 @@ int main(int argc, char* argv[]) {
         fclose(fout);
     free(cells);
     delete model;
+    delete survey;
 #ifdef OPSEC_USE_MPI
     MPI_Finalize();
 #endif

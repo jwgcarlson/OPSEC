@@ -15,6 +15,7 @@
 #include "Cell.h"
 #include "Model.h"
 #include "MyMultiVec.h"
+#include "XiFunc.h"
 #include "sig.h"
 
 
@@ -25,7 +26,7 @@ public:
 
     /* Constructor */
     MySignalMatrixOperator(int coordsys_, int N1_, int N2_, int N3_,
-            int Ncells_, const Cell* cells_, XiFunc xi_)
+            int Ncells_, const Cell* cells_, XiFunc xi_, Survey* survey)
     {
         coordsys = coordsys_;
         N1 = N1_;
@@ -54,9 +55,9 @@ public:
 
         /* FIXME: this is temporary, replace with typesafe version */
         if(coordsys == CoordSysCartesian)
-            S = ComputeSignalMatrixC(Ncells, n[me], d[me], cells, Nx, Ny, Nz, xi);
+            S = ComputeSignalMatrixC(Ncells, n[me], d[me], cells, Nx, Ny, Nz, xi, survey);
         else if(coordsys == CoordSysSpherical)
-            S = ComputeSignalMatrixS(Ncells, n[me], d[me], cells, Nr, Nmu, Nphi, xi);
+            S = ComputeSignalMatrixS(Ncells, n[me], d[me], cells, Nr, Nmu, Nphi, xi, survey);
     }
 
     /* Destructor */

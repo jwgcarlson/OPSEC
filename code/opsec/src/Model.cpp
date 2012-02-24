@@ -1,49 +1,13 @@
+#ifdef HAVE_CONFIG_H
+#  include <opsec_config.h>
+#endif
+
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-
 #include <vector>
-using std::vector;
 
 #include "Model.h"
-
-/* Should these somehow use "#pragma omp critical"'s to prevent threading issues? */
-
-XiFunc::XiFunc(XiFuncImpl* impl_) {
-    impl = impl_;
-    if(impl)
-        impl->refcount++;
-}
-
-XiFunc::XiFunc(const XiFunc& xi) {
-    impl = xi.impl;
-    if(impl)
-        impl->refcount++;
-}
-
-XiFunc& XiFunc::operator=(const XiFunc& xi) {
-    if(impl != xi.impl) {
-        if(impl && --impl->refcount <= 0)
-            delete impl;
-        impl = xi.impl;
-        if(impl)
-            impl->refcount++;
-    }
-    return *this;
-}
-
-XiFunc::~XiFunc() {
-    if(impl && --impl->refcount <= 0)
-        delete impl;
-}
-
-double XiFunc::operator()(double r, double a, double b) const {
-#ifdef DEBUG
-    return impl ? impl->xi(r, a, b) : 0.0;
-#else
-    return impl->xi(r, a, b);
-#endif
-}
 
 
 Model::Model() {
@@ -134,8 +98,8 @@ void ComputeXiLM(int l, int m, Spline P, int Nr, const double r[], double xi[],
         return;
     }
 
-    vector<double> k(Nk+1);
-    vector<double> mult(Nk+1);
+    std::vector<double> k(Nk+1);
+    std::vector<double> mult(Nk+1);
 
     /* Pre-compute k-dependent factors */
     #pragma omp parallel for

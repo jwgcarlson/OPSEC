@@ -35,16 +35,18 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = basis$(EXEEXT) comma$(EXEEXT) dot$(EXEEXT) \
-	estimate$(EXEEXT) klt$(EXEEXT) klt-anasazi$(EXEEXT)
+bin_PROGRAMS = basis$(EXEEXT) comma$(EXEEXT) comma-scalapack$(EXEEXT) \
+	dot$(EXEEXT) estimate$(EXEEXT) estimate-mpi$(EXEEXT) \
+	klt$(EXEEXT) klt-anasazi$(EXEEXT)
 subdir = src
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in TODO
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_blas.m4 \
 	$(top_srcdir)/m4/ax_lapack.m4 $(top_srcdir)/m4/ax_mpi.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/blacs.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/scalapack.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -57,10 +59,10 @@ am_libklpk_la_OBJECTS = abn.lo cfg.lo chealpix.lo eig.lo opsec.lo \
 	rng.lo libklpk_la-sig.lo libklpk_la-Cell.lo \
 	libklpk_la-QSpline.lo libklpk_la-Spline.lo \
 	libklpk_la-Survey.lo libklpk_la-BoxSurvey.lo \
-	libklpk_la-SphericalSurvey.lo libklpk_la-Model.lo \
-	libklpk_la-KaiserModel.lo libklpk_la-RealModel.lo \
-	libklpk_la-RealSplineModel.lo libklpk_la-SzapudiModel.lo \
-	libklpk_la-TestModel.lo libklpk_la-XiModel.lo
+	libklpk_la-SphericalSurvey.lo libklpk_la-SelectionFunc.lo \
+	libklpk_la-SeparationFunc.lo libklpk_la-XiFunc.lo \
+	libklpk_la-Model.lo libklpk_la-RealModel.lo \
+	libklpk_la-TestModel.lo
 libklpk_la_OBJECTS = $(am_libklpk_la_OBJECTS)
 libklpk_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(libklpk_la_CXXFLAGS) \
@@ -77,10 +79,21 @@ basis_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 am_comma_OBJECTS = comma-comma.$(OBJEXT)
 comma_OBJECTS = $(am_comma_OBJECTS)
 comma_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 comma_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(comma_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_comma_scalapack_OBJECTS =  \
+	comma_scalapack-comma-scalapack.$(OBJEXT)
+comma_scalapack_OBJECTS = $(am_comma_scalapack_OBJECTS)
+comma_scalapack_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+comma_scalapack_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(comma_scalapack_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_dot_OBJECTS = dot-dot.$(OBJEXT)
 dot_OBJECTS = $(am_dot_OBJECTS)
 dot_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
@@ -91,23 +104,33 @@ dot_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 am_estimate_OBJECTS = estimate-estimate.$(OBJEXT)
 estimate_OBJECTS = $(am_estimate_OBJECTS)
 estimate_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 estimate_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(estimate_CXXFLAGS) \
+	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_estimate_mpi_OBJECTS = estimate_mpi-estimate-mpi.$(OBJEXT)
+estimate_mpi_OBJECTS = $(am_estimate_mpi_OBJECTS)
+estimate_mpi_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+estimate_mpi_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(estimate_mpi_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_klt_OBJECTS = klt-klt.$(OBJEXT)
 klt_OBJECTS = $(am_klt_OBJECTS)
 klt_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 klt_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(klt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_klt_anasazi_OBJECTS = klt_anasazi-klt-anasazi.$(OBJEXT)
 klt_anasazi_OBJECTS = $(am_klt_anasazi_OBJECTS)
 klt_anasazi_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 klt_anasazi_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(klt_anasazi_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -134,11 +157,11 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) $(comma_SOURCES) \
-	$(dot_SOURCES) $(estimate_SOURCES) $(klt_SOURCES) \
-	$(klt_anasazi_SOURCES)
+	$(comma_scalapack_SOURCES) $(dot_SOURCES) $(estimate_SOURCES) \
+	$(estimate_mpi_SOURCES) $(klt_SOURCES) $(klt_anasazi_SOURCES)
 DIST_SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) $(comma_SOURCES) \
-	$(dot_SOURCES) $(estimate_SOURCES) $(klt_SOURCES) \
-	$(klt_anasazi_SOURCES)
+	$(comma_scalapack_SOURCES) $(dot_SOURCES) $(estimate_SOURCES) \
+	$(estimate_mpi_SOURCES) $(klt_SOURCES) $(klt_anasazi_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -152,6 +175,7 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BLACS_LIBS = @BLACS_LIBS@
 BLAS_LIBS = @BLAS_LIBS@
 CC = $(MPICC)
 CCDEPMODE = @CCDEPMODE@
@@ -220,7 +244,13 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PARPACK_LIBS = @PARPACK_LIBS@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 POW_LIB = @POW_LIB@
+PYTHON = @PYTHON@
+PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
+PYTHON_PLATFORM = @PYTHON_PLATFORM@
+PYTHON_PREFIX = @PYTHON_PREFIX@
+PYTHON_VERSION = @PYTHON_VERSION@
 RANLIB = @RANLIB@
+SCALAPACK_LIBS = @SCALAPACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -270,9 +300,13 @@ mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
+pkgpyexecdir = @pkgpyexecdir@
+pkgpythondir = @pkgpythondir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+pyexecdir = @pyexecdir@
+pythondir = @pythondir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -290,29 +324,39 @@ libklpk_la_SOURCES = \
     abn.c cfg.c chealpix.c eig.c opsec.c rng.c sig.cpp Cell.cpp QSpline.cpp \
     abn.h cfg.h chealpix.h eig.h opsec.h rng.h sig.h   Cell.h   QSpline.h \
     Spline.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
-    Spline.h Survey.h   BoxSurvey.h   SphericalSurvey.h \
-    Model.cpp KaiserModel.cpp RealModel.cpp RealSplineModel.cpp SzapudiModel.cpp TestModel.cpp XiModel.cpp \
-    Model.h   KaiserModel.h   RealModel.h   RealSplineModel.h   SzapudiModel.h   TestModel.h   XiModel.h
+    Spline.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
+    SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
+    SelectionFunc.h   SeparationFunc.h   XiFunc.h   \
+    Model.cpp RealModel.cpp TestModel.cpp \
+    Model.h   RealModel.h   TestModel.h
 
+#    KaiserModel.cpp RealSplineModel.cpp SzapudiModel.cpp TestModel.cpp XiModel.cpp \
+#    KaiserModel.h   RealSplineModel.h   SzapudiModel.h   TestModel.h   XiModel.h
 libklpk_la_CXXFLAGS = $(OPENMP_CFLAGS)
 basis_SOURCES = basis.cpp
 basis_CXXFLAGS = $(OPENMP_CFLAGS)
 basis_LDADD = libklpk.la $(FITSIO_LIBS)
 comma_SOURCES = comma.cpp
 comma_CXXFLAGS = $(OPENMP_CFLAGS)
-comma_LDADD = libklpk.la $(BLAS_LIBS) $(FLIBS)
+comma_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
+comma_scalapack_SOURCES = comma-scalapack.cpp
+comma_scalapack_CXXFLAGS = $(OPENMP_CFLAGS)
+comma_scalapack_LDADD = libklpk.la $(FITSIO_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 dot_SOURCES = dot.cpp
 dot_CXXFLAGS = $(OPENMP_CFLAGS)
 dot_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
 estimate_SOURCES = estimate.cpp
 estimate_CXXFLAGS = $(OPENMP_CFLAGS)
-estimate_LDADD = libklpk.la $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+estimate_LDADD = libklpk.la $(FITSIO_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+estimate_mpi_SOURCES = estimate-mpi.cpp
+estimate_mpi_CXXFLAGS = $(OPENMP_CFLAGS)
+estimate_mpi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 klt_SOURCES = klt.cpp
 klt_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_LDADD = libklpk.la $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
+klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 klt_anasazi_SOURCES = klt-anasazi.cpp
 klt_anasazi_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_anasazi_LDADD = libklpk.la $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
+klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 all: all-am
 
 .SUFFIXES:
@@ -407,12 +451,18 @@ basis$(EXEEXT): $(basis_OBJECTS) $(basis_DEPENDENCIES)
 comma$(EXEEXT): $(comma_OBJECTS) $(comma_DEPENDENCIES) 
 	@rm -f comma$(EXEEXT)
 	$(comma_LINK) $(comma_OBJECTS) $(comma_LDADD) $(LIBS)
+comma-scalapack$(EXEEXT): $(comma_scalapack_OBJECTS) $(comma_scalapack_DEPENDENCIES) 
+	@rm -f comma-scalapack$(EXEEXT)
+	$(comma_scalapack_LINK) $(comma_scalapack_OBJECTS) $(comma_scalapack_LDADD) $(LIBS)
 dot$(EXEEXT): $(dot_OBJECTS) $(dot_DEPENDENCIES) 
 	@rm -f dot$(EXEEXT)
 	$(dot_LINK) $(dot_OBJECTS) $(dot_LDADD) $(LIBS)
 estimate$(EXEEXT): $(estimate_OBJECTS) $(estimate_DEPENDENCIES) 
 	@rm -f estimate$(EXEEXT)
 	$(estimate_LINK) $(estimate_OBJECTS) $(estimate_LDADD) $(LIBS)
+estimate-mpi$(EXEEXT): $(estimate_mpi_OBJECTS) $(estimate_mpi_DEPENDENCIES) 
+	@rm -f estimate-mpi$(EXEEXT)
+	$(estimate_mpi_LINK) $(estimate_mpi_OBJECTS) $(estimate_mpi_LDADD) $(LIBS)
 klt$(EXEEXT): $(klt_OBJECTS) $(klt_DEPENDENCIES) 
 	@rm -f klt$(EXEEXT)
 	$(klt_LINK) $(klt_OBJECTS) $(klt_LDADD) $(LIBS)
@@ -431,24 +481,25 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cfg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/chealpix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comma-comma.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comma_scalapack-comma-scalapack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dot-dot.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate-estimate.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate_mpi-estimate-mpi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt-klt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt_anasazi-klt-anasazi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-BoxSurvey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Cell.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-KaiserModel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Model.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-QSpline.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-RealModel.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-RealSplineModel.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SelectionFunc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SeparationFunc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SphericalSurvey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Spline.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Survey.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SzapudiModel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-TestModel.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-XiModel.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-XiFunc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-sig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opsec.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rng.Plo@am__quote@
@@ -544,19 +595,33 @@ libklpk_la-SphericalSurvey.lo: SphericalSurvey.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-SphericalSurvey.lo `test -f 'SphericalSurvey.cpp' || echo '$(srcdir)/'`SphericalSurvey.cpp
 
+libklpk_la-SelectionFunc.lo: SelectionFunc.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-SelectionFunc.lo -MD -MP -MF $(DEPDIR)/libklpk_la-SelectionFunc.Tpo -c -o libklpk_la-SelectionFunc.lo `test -f 'SelectionFunc.cpp' || echo '$(srcdir)/'`SelectionFunc.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-SelectionFunc.Tpo $(DEPDIR)/libklpk_la-SelectionFunc.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='SelectionFunc.cpp' object='libklpk_la-SelectionFunc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-SelectionFunc.lo `test -f 'SelectionFunc.cpp' || echo '$(srcdir)/'`SelectionFunc.cpp
+
+libklpk_la-SeparationFunc.lo: SeparationFunc.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-SeparationFunc.lo -MD -MP -MF $(DEPDIR)/libklpk_la-SeparationFunc.Tpo -c -o libklpk_la-SeparationFunc.lo `test -f 'SeparationFunc.cpp' || echo '$(srcdir)/'`SeparationFunc.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-SeparationFunc.Tpo $(DEPDIR)/libklpk_la-SeparationFunc.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='SeparationFunc.cpp' object='libklpk_la-SeparationFunc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-SeparationFunc.lo `test -f 'SeparationFunc.cpp' || echo '$(srcdir)/'`SeparationFunc.cpp
+
+libklpk_la-XiFunc.lo: XiFunc.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-XiFunc.lo -MD -MP -MF $(DEPDIR)/libklpk_la-XiFunc.Tpo -c -o libklpk_la-XiFunc.lo `test -f 'XiFunc.cpp' || echo '$(srcdir)/'`XiFunc.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-XiFunc.Tpo $(DEPDIR)/libklpk_la-XiFunc.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='XiFunc.cpp' object='libklpk_la-XiFunc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-XiFunc.lo `test -f 'XiFunc.cpp' || echo '$(srcdir)/'`XiFunc.cpp
+
 libklpk_la-Model.lo: Model.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-Model.lo -MD -MP -MF $(DEPDIR)/libklpk_la-Model.Tpo -c -o libklpk_la-Model.lo `test -f 'Model.cpp' || echo '$(srcdir)/'`Model.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-Model.Tpo $(DEPDIR)/libklpk_la-Model.Plo
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='Model.cpp' object='libklpk_la-Model.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-Model.lo `test -f 'Model.cpp' || echo '$(srcdir)/'`Model.cpp
-
-libklpk_la-KaiserModel.lo: KaiserModel.cpp
-@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-KaiserModel.lo -MD -MP -MF $(DEPDIR)/libklpk_la-KaiserModel.Tpo -c -o libklpk_la-KaiserModel.lo `test -f 'KaiserModel.cpp' || echo '$(srcdir)/'`KaiserModel.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-KaiserModel.Tpo $(DEPDIR)/libklpk_la-KaiserModel.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='KaiserModel.cpp' object='libklpk_la-KaiserModel.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-KaiserModel.lo `test -f 'KaiserModel.cpp' || echo '$(srcdir)/'`KaiserModel.cpp
 
 libklpk_la-RealModel.lo: RealModel.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-RealModel.lo -MD -MP -MF $(DEPDIR)/libklpk_la-RealModel.Tpo -c -o libklpk_la-RealModel.lo `test -f 'RealModel.cpp' || echo '$(srcdir)/'`RealModel.cpp
@@ -565,33 +630,12 @@ libklpk_la-RealModel.lo: RealModel.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-RealModel.lo `test -f 'RealModel.cpp' || echo '$(srcdir)/'`RealModel.cpp
 
-libklpk_la-RealSplineModel.lo: RealSplineModel.cpp
-@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-RealSplineModel.lo -MD -MP -MF $(DEPDIR)/libklpk_la-RealSplineModel.Tpo -c -o libklpk_la-RealSplineModel.lo `test -f 'RealSplineModel.cpp' || echo '$(srcdir)/'`RealSplineModel.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-RealSplineModel.Tpo $(DEPDIR)/libklpk_la-RealSplineModel.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='RealSplineModel.cpp' object='libklpk_la-RealSplineModel.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-RealSplineModel.lo `test -f 'RealSplineModel.cpp' || echo '$(srcdir)/'`RealSplineModel.cpp
-
-libklpk_la-SzapudiModel.lo: SzapudiModel.cpp
-@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-SzapudiModel.lo -MD -MP -MF $(DEPDIR)/libklpk_la-SzapudiModel.Tpo -c -o libklpk_la-SzapudiModel.lo `test -f 'SzapudiModel.cpp' || echo '$(srcdir)/'`SzapudiModel.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-SzapudiModel.Tpo $(DEPDIR)/libklpk_la-SzapudiModel.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='SzapudiModel.cpp' object='libklpk_la-SzapudiModel.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-SzapudiModel.lo `test -f 'SzapudiModel.cpp' || echo '$(srcdir)/'`SzapudiModel.cpp
-
 libklpk_la-TestModel.lo: TestModel.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-TestModel.lo -MD -MP -MF $(DEPDIR)/libklpk_la-TestModel.Tpo -c -o libklpk_la-TestModel.lo `test -f 'TestModel.cpp' || echo '$(srcdir)/'`TestModel.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-TestModel.Tpo $(DEPDIR)/libklpk_la-TestModel.Plo
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='TestModel.cpp' object='libklpk_la-TestModel.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-TestModel.lo `test -f 'TestModel.cpp' || echo '$(srcdir)/'`TestModel.cpp
-
-libklpk_la-XiModel.lo: XiModel.cpp
-@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-XiModel.lo -MD -MP -MF $(DEPDIR)/libklpk_la-XiModel.Tpo -c -o libklpk_la-XiModel.lo `test -f 'XiModel.cpp' || echo '$(srcdir)/'`XiModel.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-XiModel.Tpo $(DEPDIR)/libklpk_la-XiModel.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='XiModel.cpp' object='libklpk_la-XiModel.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-XiModel.lo `test -f 'XiModel.cpp' || echo '$(srcdir)/'`XiModel.cpp
 
 basis-basis.o: basis.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(basis_CXXFLAGS) $(CXXFLAGS) -MT basis-basis.o -MD -MP -MF $(DEPDIR)/basis-basis.Tpo -c -o basis-basis.o `test -f 'basis.cpp' || echo '$(srcdir)/'`basis.cpp
@@ -621,6 +665,20 @@ comma-comma.obj: comma.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_CXXFLAGS) $(CXXFLAGS) -c -o comma-comma.obj `if test -f 'comma.cpp'; then $(CYGPATH_W) 'comma.cpp'; else $(CYGPATH_W) '$(srcdir)/comma.cpp'; fi`
 
+comma_scalapack-comma-scalapack.o: comma-scalapack.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_scalapack_CXXFLAGS) $(CXXFLAGS) -MT comma_scalapack-comma-scalapack.o -MD -MP -MF $(DEPDIR)/comma_scalapack-comma-scalapack.Tpo -c -o comma_scalapack-comma-scalapack.o `test -f 'comma-scalapack.cpp' || echo '$(srcdir)/'`comma-scalapack.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/comma_scalapack-comma-scalapack.Tpo $(DEPDIR)/comma_scalapack-comma-scalapack.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='comma-scalapack.cpp' object='comma_scalapack-comma-scalapack.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_scalapack_CXXFLAGS) $(CXXFLAGS) -c -o comma_scalapack-comma-scalapack.o `test -f 'comma-scalapack.cpp' || echo '$(srcdir)/'`comma-scalapack.cpp
+
+comma_scalapack-comma-scalapack.obj: comma-scalapack.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_scalapack_CXXFLAGS) $(CXXFLAGS) -MT comma_scalapack-comma-scalapack.obj -MD -MP -MF $(DEPDIR)/comma_scalapack-comma-scalapack.Tpo -c -o comma_scalapack-comma-scalapack.obj `if test -f 'comma-scalapack.cpp'; then $(CYGPATH_W) 'comma-scalapack.cpp'; else $(CYGPATH_W) '$(srcdir)/comma-scalapack.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/comma_scalapack-comma-scalapack.Tpo $(DEPDIR)/comma_scalapack-comma-scalapack.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='comma-scalapack.cpp' object='comma_scalapack-comma-scalapack.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_scalapack_CXXFLAGS) $(CXXFLAGS) -c -o comma_scalapack-comma-scalapack.obj `if test -f 'comma-scalapack.cpp'; then $(CYGPATH_W) 'comma-scalapack.cpp'; else $(CYGPATH_W) '$(srcdir)/comma-scalapack.cpp'; fi`
+
 dot-dot.o: dot.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dot_CXXFLAGS) $(CXXFLAGS) -MT dot-dot.o -MD -MP -MF $(DEPDIR)/dot-dot.Tpo -c -o dot-dot.o `test -f 'dot.cpp' || echo '$(srcdir)/'`dot.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/dot-dot.Tpo $(DEPDIR)/dot-dot.Po
@@ -648,6 +706,20 @@ estimate-estimate.obj: estimate.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='estimate.cpp' object='estimate-estimate.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_CXXFLAGS) $(CXXFLAGS) -c -o estimate-estimate.obj `if test -f 'estimate.cpp'; then $(CYGPATH_W) 'estimate.cpp'; else $(CYGPATH_W) '$(srcdir)/estimate.cpp'; fi`
+
+estimate_mpi-estimate-mpi.o: estimate-mpi.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_mpi_CXXFLAGS) $(CXXFLAGS) -MT estimate_mpi-estimate-mpi.o -MD -MP -MF $(DEPDIR)/estimate_mpi-estimate-mpi.Tpo -c -o estimate_mpi-estimate-mpi.o `test -f 'estimate-mpi.cpp' || echo '$(srcdir)/'`estimate-mpi.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/estimate_mpi-estimate-mpi.Tpo $(DEPDIR)/estimate_mpi-estimate-mpi.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='estimate-mpi.cpp' object='estimate_mpi-estimate-mpi.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_mpi_CXXFLAGS) $(CXXFLAGS) -c -o estimate_mpi-estimate-mpi.o `test -f 'estimate-mpi.cpp' || echo '$(srcdir)/'`estimate-mpi.cpp
+
+estimate_mpi-estimate-mpi.obj: estimate-mpi.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_mpi_CXXFLAGS) $(CXXFLAGS) -MT estimate_mpi-estimate-mpi.obj -MD -MP -MF $(DEPDIR)/estimate_mpi-estimate-mpi.Tpo -c -o estimate_mpi-estimate-mpi.obj `if test -f 'estimate-mpi.cpp'; then $(CYGPATH_W) 'estimate-mpi.cpp'; else $(CYGPATH_W) '$(srcdir)/estimate-mpi.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/estimate_mpi-estimate-mpi.Tpo $(DEPDIR)/estimate_mpi-estimate-mpi.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='estimate-mpi.cpp' object='estimate_mpi-estimate-mpi.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_mpi_CXXFLAGS) $(CXXFLAGS) -c -o estimate_mpi-estimate-mpi.obj `if test -f 'estimate-mpi.cpp'; then $(CYGPATH_W) 'estimate-mpi.cpp'; else $(CYGPATH_W) '$(srcdir)/estimate-mpi.cpp'; fi`
 
 klt-klt.o: klt.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(klt_CXXFLAGS) $(CXXFLAGS) -MT klt-klt.o -MD -MP -MF $(DEPDIR)/klt-klt.Tpo -c -o klt-klt.o `test -f 'klt.cpp' || echo '$(srcdir)/'`klt.cpp
@@ -888,6 +960,8 @@ uninstall-am: uninstall-binPROGRAMS
 printflags:
 	@echo FITSIO_LIBS = $(FITSIO_LIBS)
 	@echo ANASAZI_LIBS = $(ANASAZI_LIBS)
+	@echo SCALAPACK_LIBS = $(SCALAPACK_LIBS)
+	@echo BLACS_LIBS = $(BLACS_LIBS)
 	@echo ARPACK_LIBS = $(ARPACK_LIBS)
 	@echo PARPACK_LIBS = $(PARPACK_LIBS)
 	@echo BLAS_LIBS = $(BLAS_LIBS)

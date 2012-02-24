@@ -29,3 +29,9 @@ passed to the configure script.  The most important ones are listed here:
     BLAS_LIBS=
     LAPACK_LIBS=
     MPIFLIBS=
+
+
+Note: If you want to use Intel's Math Kernel Library for BLAS, LAPACK, BLACS,
+and/or ScaLAPACK, you should use the MKL Link Line Advisor tool to determine
+the appropriate linker options:
+    http://software.intel.com/en-us/articles/intel-mkl-link-line-advisor/

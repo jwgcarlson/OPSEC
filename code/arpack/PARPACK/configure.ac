@@ -4,10 +4,10 @@ AC_PREREQ(2.59)
 
 AC_INIT([PARPACK], [2.1], [jwgcarlson@gmail.com])
 AM_INIT_AUTOMAKE([foreign])
+LT_INIT([disable-shared])
 AM_MAINTAINER_MODE([disable])
 AC_CONFIG_MACRO_DIR([m4])
 
-AC_PROG_LIBTOOL
 AC_PROG_F77
 
 # Find MPI-compatible F77 compiler

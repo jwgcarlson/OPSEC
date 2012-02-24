@@ -16,8 +16,11 @@ public:
     SphericalSurvey(Config cfg);
     ~SphericalSurvey();
 
+    /* Survey interface */
+    int GetCoordinateSystem() const;
+    SeparationFunc GetSeparationFunction();
     SelectionFunc GetSelectionFunction();
-    Galaxy* GetGalaxies(int* ngals);
+    void GetGalaxies(std::vector<Galaxy>& gals);
 
     /* Compute the sky area coverage of the survey, weighted by the
      * completeness mask. */

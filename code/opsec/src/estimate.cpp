@@ -351,6 +351,11 @@ int main(int argc, char* argv[]) {
                 R[i*Nmodes + j] -= Dn[i*Nmodes + j] * pn;
     }
 
+    /* Print C,1 */
+    for(j = 0; j < Nmodes; j++)
+        for(i = 0; i <= j; i++)
+            printf("D[0](%d,%d) = %g\n", i, j, D[0][i*Nmodes+j]);
+
     /* Pre-multiply covariance matrix derivatives by $C^{-1}$ */
     #pragma omp parallel for private(i,j,Dn)
     for(n = 0; n < Nparams; n++) {

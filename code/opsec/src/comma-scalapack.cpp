@@ -26,6 +26,8 @@
 #include "Cell.h"
 #include "Model.h"
 #include "SplitFile.h"
+#include "Survey.h"
+#include "XiFunc.h"
 #include "abn.h"
 #include "cfg.h"
 #include "cscalapack.h"
@@ -152,11 +154,15 @@ static inline void mypdgemr2d(int m, int n,
 int main(int argc, char* argv[]) {
     int Ncells, Nmodes, Nparams;
     const char *cellfile, *modefile, *covfile;
-    FILE* fout = NULL;
 
 #ifdef OPSEC_USE_MPI
     MPI_Init(&argc, &argv);
 #endif
+
+    /* Set up global BLACS context encompassing all processes */
+    int nprocs, me;
+    Cblacs_pinfo(&me, &nprocs);
+    Context gcontext = create_context(nprocs, 1);
 
     Config cfg = opsec_init(argc, argv, usage);
 
@@ -170,11 +176,6 @@ int main(int argc, char* argv[]) {
     modefile = cfg_get(cfg, "modefile");
     covfile = cfg_get(cfg, "covfile");
     Nmodes = cfg_get_int(cfg, "Nmodes");
-
-    /* Set up global BLACS context encompassing all processes */
-    int nprocs, me;
-    Cblacs_pinfo(&me, &nprocs);
-    Context gcontext = create_context(nprocs, 1);
 
     /* Decide how best to partition available processes into 2-D process grid */
     int nprow = nprocs, npcol = 1;
@@ -217,16 +218,16 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
     }
 
-    int Nr, Nmu, Nphi, Nx, Ny, Nz;
+    int N1, N2, N3;
     if(coordsys == CoordSysSpherical) {
         if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi", ",")) {
             if(me == 0)
                 fprintf(stderr, "comma: need Nr,Nmu,Nphi for spherical coordinates\n");
             opsec_exit(1);
         }
-        Nr = cfg_get_int(cfg, "Nr");
-        Nmu = cfg_get_int(cfg, "Nmu");
-        Nphi = cfg_get_int(cfg, "Nphi");
+        N1 = cfg_get_int(cfg, "Nr");
+        N2 = cfg_get_int(cfg, "Nmu");
+        N3 = cfg_get_int(cfg, "Nphi");
     }
     else if(coordsys == CoordSysCartesian) {
         if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
@@ -234,16 +235,21 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "comma: need Nx,Ny,Nz for cartesian coordinates\n");
             opsec_exit(1);
         }
-        Nx = cfg_get_int(cfg, "Nx");
-        Ny = cfg_get_int(cfg, "Ny");
-        Nz = cfg_get_int(cfg, "Nz");
+        N1 = cfg_get_int(cfg, "Nx");
+        N2 = cfg_get_int(cfg, "Ny");
+        N3 = cfg_get_int(cfg, "Nz");
     }
 
-    /* Get model */
+    /* Load model */
     Model* model = InitializeModel(cfg);
     if(!model)
         opsec_exit(1);
     Nparams = model->NumParams();
+
+    /* Load survey */
+    Survey* survey = InitializeSurvey(cfg);
+    if(!survey)
+        opsec_exit(1);
 
     /* Read cells from file */
     Cell* cells = ReadCells(cellfile, &Ncells);
@@ -274,7 +280,7 @@ int main(int argc, char* argv[]) {
             opsec_abort(1);
 
         size_t n, size;
-        char endian, fmt[ABN_MAX_FMT_LENGTH];
+        char endian, fmt[ABN_MAX_FORMAT_LENGTH];
         Config opts = cfg_new();
         abn_read_header(fmodes, &n, &size, &endian, fmt, opts);
         if(cfg_has_key(opts, "Nmodes"))
@@ -287,14 +293,14 @@ int main(int argc, char* argv[]) {
     /* Read modes one at a time, redistributing from root process to full process grid */
     for(int j = 0; j < Nmodes; j++) {
         if(me == 0) {
-            ssize_t nread = fmodes.read(mode, Ncells*sizeof(real));
+            ssize_t nread = fmodes.read((char*) mode, Ncells*sizeof(real));
             if(nread != Ncells*sizeof(real)) {
                 fprintf(stderr, "comma: error reading modes (%s,%d,%zd,%d)\n", fmodes.get_filename().c_str(), j, nread, Ncells);
                 opsec_abort(1);
             }
         }
 
-        mypdgemr2d(m_B, 1, mode, 0, 0, descmode, B, 0, j, descB, gcontext);
+        mypdgemr2d(m_B, 1, mode, 0, 0, descmode, Bloc, 0, j, descB, gcontext);
     }
 
     if(me == 0) {
@@ -360,16 +366,30 @@ int main(int argc, char* argv[]) {
     }
 
     for(int param = 0; param < Nparams; param++) {
+        if(me == 0) {
+            printf("Parameter %d/%d\n", param+1, Nparams);
+            fflush(stdout);
+        }
+
         XiFunc xi = model->GetXiDeriv(param);
 
-        /* Compute local signal matrix elements in cell basis */
-        for(int aloc = 0; aloc < mloc_S; aloc++) {
-            int a = myindxl2g(aloc, mb_S, pcontext.myrow, pcontext.rsrc, pcontext.nprow);
-            for(int bloc = 0; bloc < nloc_S; bloc++) {
-                int b = myindxl2g(bloc, nb_S, pcontext.mycol, pcontext.csrc, pcontext.npcol);
+        if(me == 0) {
+            printf("  Computing matrix elements of C,%d in cell basis\n", param+1);
+            fflush(stdout);
+        }
 
-                Sloc[aloc + descP.lld*bloc] = ComputeSignalMatrixElement(a, b, xi, cells, coordsys);
-            }
+        /* Compute local signal matrix elements in cell basis */
+        std::vector<int> rows(mloc_S), cols(nloc_S);
+        for(int aloc = 0; aloc < mloc_S; aloc++)
+            rows[aloc] = myindxl2g(aloc, descS.mb, pcontext.myrow, descS.rsrc, pcontext.nprow);
+        for(int bloc = 0; bloc < nloc_S; bloc++)
+            cols[bloc] = myindxl2g(bloc, descS.nb, pcontext.mycol, descS.csrc, pcontext.npcol);
+        ComputeSignalMatrixBlock(Ncells, mloc_S, &rows[0], nloc_S, &cols[0],
+                                 Sloc, descS.lld, xi, survey, coordsys, cells, N1, N2, N3);
+
+        if(me == 0) {
+            printf("  Projecting onto mode basis\n");
+            fflush(stdout);
         }
 
         /* Compute C = S . B */
@@ -378,11 +398,19 @@ int main(int argc, char* argv[]) {
         /* Compute P = B^T . S */
         mypdgemm("T", "N", Nmodes, Nmodes, Ncells, 1.0, Bloc, 0, 0, descB, Cloc, 0, 0, descC, 0.0, Ploc, 0, 0, descP);
 
+        if(me == 0) {
+            printf("  Gathering results on root process and writing to file\n");
+            fflush(stdout);
+        }
+
         /* Gather P to root process, column by column, and write to file */
         for(int j = 0; j < Nmodes; j++) {
             mypdgemr2d(m_P, 1, Ploc, 0, j, descP, colP, 0, 0, desccolP, gcontext);
-            if(me == 0)
-                fout.write(colP, (j+1)*sizeof(real));
+            if(me == 0) {
+                fout.write((char*) colP, (j+1)*sizeof(real));
+                for(int i = 0; i <= j; i++)
+                    printf("D[%d](%d,%d) = %g\n", param, i, j, colP[i]);
+            }
         }
     }
     if(me == 0)

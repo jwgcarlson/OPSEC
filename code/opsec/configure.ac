@@ -21,6 +21,10 @@ AC_F77_LIBRARY_LDFLAGS
 AC_F77_WRAPPERS
 AC_PROG_LIBTOOL
 
+# Check for Python.
+AM_PATH_PYTHON([2.5], [], [AC_MSG_WARN([Python support disabled.])])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != ":"])
+
 # Checks for libraries.
 
 # Checks for header files.
@@ -113,6 +117,19 @@ dnl *******************************************************************
 
 AX_BLAS([], AC_MSG_ERROR([Could not find BLAS.]))
 AX_LAPACK([], AC_MSG_ERROR([Could not find LAPACK.]))
+
+
+dnl *******************************************************************
+dnl Find BLACS and ScaLAPACK
+dnl *******************************************************************
+
+AC_LANG_PUSH([C])
+    save_CC="$CC"
+    CC="$MPICC"
+    ACX_BLACS([], AC_MSG_ERROR([Could not find BLACS.]))
+    ACX_SCALAPACK([], AC_MSG_ERROR([Could not find ScaLAPACK.]))
+    CC="$save_CC"
+AC_LANG_POP([C])
 
 
 dnl *******************************************************************
@@ -299,6 +316,7 @@ AC_SUBST(CPPFLAGS, ["$CPPFLAGS $ANASAZI_CPPFLAGS $FITSIO_CPPFLAGS"])
 AC_SUBST(UTILITIES)
 
 AC_CONFIG_FILES([Makefile
+                 python/Makefile
                  src/Makefile
                  tests/Makefile
                  utils/Makefile])

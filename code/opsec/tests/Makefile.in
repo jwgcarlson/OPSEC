@@ -33,17 +33,18 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-check_PROGRAMS = testMyMatrix$(EXEEXT) testSplitFile$(EXEEXT) \
-	testabn$(EXEEXT) testcfg$(EXEEXT) testeig$(EXEEXT) \
-	testmv$(EXEEXT) testsig$(EXEEXT)
+check_PROGRAMS = testMyMatrix$(EXEEXT) testScaLAPACK$(EXEEXT) \
+	testSplitFile$(EXEEXT) testabn$(EXEEXT) testcfg$(EXEEXT) \
+	testeig$(EXEEXT) testmv$(EXEEXT) testsig$(EXEEXT)
 subdir = tests
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_blas.m4 \
 	$(top_srcdir)/m4/ax_lapack.m4 $(top_srcdir)/m4/ax_mpi.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/blacs.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/scalapack.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -55,6 +56,11 @@ testMyMatrix_OBJECTS = $(am_testMyMatrix_OBJECTS)
 am__DEPENDENCIES_1 =
 testMyMatrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_testScaLAPACK_OBJECTS = testScaLAPACK.$(OBJEXT) CuTest.$(OBJEXT)
+testScaLAPACK_OBJECTS = $(am_testScaLAPACK_OBJECTS)
+testScaLAPACK_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_testSplitFile_OBJECTS = testSplitFile.$(OBJEXT) CuTest.$(OBJEXT)
 testSplitFile_OBJECTS = $(am_testSplitFile_OBJECTS)
 testSplitFile_LDADD = $(LDADD)
@@ -98,12 +104,12 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(testMyMatrix_SOURCES) $(testSplitFile_SOURCES) \
-	$(testabn_SOURCES) $(testcfg_SOURCES) $(testeig_SOURCES) \
-	$(testmv_SOURCES) $(testsig_SOURCES)
-DIST_SOURCES = $(testMyMatrix_SOURCES) $(testSplitFile_SOURCES) \
-	$(testabn_SOURCES) $(testcfg_SOURCES) $(testeig_SOURCES) \
-	$(testmv_SOURCES) $(testsig_SOURCES)
+SOURCES = $(testMyMatrix_SOURCES) $(testScaLAPACK_SOURCES) \
+	$(testSplitFile_SOURCES) $(testabn_SOURCES) $(testcfg_SOURCES) \
+	$(testeig_SOURCES) $(testmv_SOURCES) $(testsig_SOURCES)
+DIST_SOURCES = $(testMyMatrix_SOURCES) $(testScaLAPACK_SOURCES) \
+	$(testSplitFile_SOURCES) $(testabn_SOURCES) $(testcfg_SOURCES) \
+	$(testeig_SOURCES) $(testmv_SOURCES) $(testsig_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -119,6 +125,7 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BLACS_LIBS = @BLACS_LIBS@
 BLAS_LIBS = @BLAS_LIBS@
 CC = $(MPICC)
 CCDEPMODE = @CCDEPMODE@
@@ -187,7 +194,13 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PARPACK_LIBS = @PARPACK_LIBS@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 POW_LIB = @POW_LIB@
+PYTHON = @PYTHON@
+PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
+PYTHON_PLATFORM = @PYTHON_PLATFORM@
+PYTHON_PREFIX = @PYTHON_PREFIX@
+PYTHON_VERSION = @PYTHON_VERSION@
 RANLIB = @RANLIB@
+SCALAPACK_LIBS = @SCALAPACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -237,9 +250,13 @@ mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
+pkgpyexecdir = @pkgpyexecdir@
+pkgpythondir = @pkgpythondir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+pyexecdir = @pyexecdir@
+pythondir = @pythondir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -259,6 +276,8 @@ testmv_SOURCES = testmv.cpp CuTest.c
 testmv_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 testMyMatrix_SOURCES = testMyMatrix.cpp CuTest.c
 testMyMatrix_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
+testScaLAPACK_SOURCES = testScaLAPACK.cpp CuTest.c
+testScaLAPACK_LDADD = $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 testSplitFile_SOURCES = testSplitFile.cpp CuTest.c
 testsig_SOURCES = testsig.cpp
 all: all-am
@@ -307,6 +326,9 @@ clean-checkPROGRAMS:
 testMyMatrix$(EXEEXT): $(testMyMatrix_OBJECTS) $(testMyMatrix_DEPENDENCIES) 
 	@rm -f testMyMatrix$(EXEEXT)
 	$(CXXLINK) $(testMyMatrix_OBJECTS) $(testMyMatrix_LDADD) $(LIBS)
+testScaLAPACK$(EXEEXT): $(testScaLAPACK_OBJECTS) $(testScaLAPACK_DEPENDENCIES) 
+	@rm -f testScaLAPACK$(EXEEXT)
+	$(CXXLINK) $(testScaLAPACK_OBJECTS) $(testScaLAPACK_LDADD) $(LIBS)
 testSplitFile$(EXEEXT): $(testSplitFile_OBJECTS) $(testSplitFile_DEPENDENCIES) 
 	@rm -f testSplitFile$(EXEEXT)
 	$(CXXLINK) $(testSplitFile_OBJECTS) $(testSplitFile_LDADD) $(LIBS)
@@ -334,6 +356,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CuTest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testMyMatrix.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testScaLAPACK.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testSplitFile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testabn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testcfg.Po@am__quote@

@@ -8,9 +8,42 @@
 using std::vector;
 
 #include "SphericalSurvey.h"
+#include "SelectionFunc.h"
+#include "SeparationFunc.h"
 #include "Spline.h"
 #include "abn.h"
 #include "chealpix.h"
+
+
+/* Separation between two points in spherical coordinates. */
+struct SphericalSeparationFuncImpl : public SeparationFuncImpl {
+    double r(const Point& p1, const Point& p2) {
+        double cosgamma = sqrt((1-p1.mu*p1.mu) * (1-p2.mu*p2.mu)) * cos(p1.phi - p2.phi) + p1.mu*p2.mu;
+        return sqrt(fmax(p1.r*p1.r + p2.r*p2.r - 2*p1.r*p2.r*cosgamma, 0.0));
+    }
+
+    void rmu(const Point& p1, const Point& p2, double& r, double& mu) {
+        double cosgamma = sqrt((1-p1.mu*p1.mu) * (1-p2.mu*p2.mu)) * cos(p1.phi - p2.phi) + p1.mu*p2.mu;
+        r = sqrt(fmax(p1.r*p1.r + p2.r*p2.r - 2*p1.r*p2.r*cosgamma, 0.0));
+        if(r == 0)
+            mu = 0;
+        else {
+            double singamma = sqrt(1 - fmax(1, cosgamma*cosgamma));
+            double sinbeta = singamma * p2.r/r;         // \sin\gamma / r = \sin\beta / b
+            double cosbeta = sqrt(1 - fmax(1, sinbeta*sinbeta));
+            double cosgamma2 = sqrt((1 + cosgamma)/2.); // \cos(\gamma/2) = \sqrt{(1 + \cos\gamma)/2}
+            double singamma2 = sqrt((1 - cosgamma)/2.); // \sin(\gamma/2) = \sqrt{(1 - \cos\gamma)/2}
+            mu = cosgamma2*cosbeta - singamma2*sinbeta; // \mu = \cos\phi = \cos(\gamma/2 + \beta)
+        }
+    }
+
+    void rab(const Point& p1, const Point& p2, double& r, double& a, double& b) {
+        double cosgamma = sqrt((1-p1.mu*p1.mu) * (1-p2.mu*p2.mu)) * cos(p1.phi - p2.phi) + p1.mu*p2.mu;
+        r = sqrt(fmax(p1.r*p1.r + p2.r*p2.r - 2*p1.r*p2.r*cosgamma, 0.0));
+        a = p1.r;
+        b = p2.r;
+    }
+};
 
 
 /* Selection function in spherical coordinates, using HEALPix map for angular
@@ -57,6 +90,15 @@ SphericalSurvey::SphericalSurvey(Config cfg) {
 SphericalSurvey::~SphericalSurvey() {
 }
 
+
+int SphericalSurvey::GetCoordinateSystem() const {
+    return CoordSysSpherical;
+}
+
+SeparationFunc SphericalSurvey::GetSeparationFunction() {
+    return SeparationFunc(new SphericalSeparationFuncImpl());
+}
+
 SelectionFunc SphericalSurvey::GetSelectionFunction() {
     /* Read HEALPix file */
     long nside;
@@ -95,15 +137,17 @@ SelectionFunc SphericalSurvey::GetSelectionFunction() {
     else {
         /* Read radial selection function from file */
         radial_nbar = LinearSpline(radial.c_str());
-        return new SphericalSelectionFuncImpl(nside, nest, mask, radial_nbar);
+        return SelectionFunc(new SphericalSelectionFuncImpl(nside, nest, mask, radial_nbar));
     }
 }
 
-Galaxy* SphericalSurvey::GetGalaxies(int* ngals) {
+void SphericalSurvey::GetGalaxies(std::vector<Galaxy>& gals) {
+    size_t norig = gals.size();
+
     FILE* fgals = fopen(galfile.c_str(), "r");
     if(fgals == NULL) {
         fprintf(stderr, "SphericalSurvey: could not open file '%s'\n", galfile.c_str());
-        return NULL;
+        return;
     }
 
     size_t n, size;
@@ -114,27 +158,17 @@ Galaxy* SphericalSurvey::GetGalaxies(int* ngals) {
     {
         fprintf(stderr, "SphericalSurvey: error reading galaxies from '%s'\n", galfile.c_str());
         fclose(fgals);
-        return NULL;
+        return;
     }
 
-    Galaxy* gals = (Galaxy*) malloc(n*sizeof(Galaxy));
-    if(!gals) {
-        fprintf(stderr, "BoxSurvey: could not allocate memory for %zd galaxies\n", n);
-        fclose(fgals);
-        return NULL;
-    }
+    /* Make room for n additional Galaxy objects */
+    gals.resize(norig + n);
 
-    size_t nread = fread((void*) gals, size, n, fgals);
-    if(nread != n) {
+    size_t nread = fread((void*) &gals[norig], size, n, fgals);
+    if(nread != n)
         fprintf(stderr, "SphericalSurvey: expecting %zd galaxies from '%s', got %zd\n", n, galfile.c_str(), nread);
-        fclose(fgals);
-        return NULL;
-    }
 
     fclose(fgals);
-    if(ngals)
-        *ngals = (int)n;
-    return gals;
 }
 
 double SphericalSurvey::ComputeWeightedArea(long nside, float* mask) {

@@ -3,19 +3,24 @@
 
 /* Concrete implementation of Anasazi::MultiVec<ScalarType> class.
  * - Employs distributed data model using MPI, with each vector split across
- *   processes in the natural way.  For a vector of length N distributed over
+ *   processes in the natural way.  For a vector of length n distributed over
  *   k processes, the process with rank p is assigned
- *       Nloc = (N/k) + (p < (N % k))
- *   rows of the vector.  That is, if k evenly divides N, then each process
- *   gets N/k rows; otherwise, if the remainder is r = (N % k), then the first
- *   r processes get floor(N/k)+1 rows, while the remaining processes get
- *   floor(N/k) rows each.  [This is a "natural" data distribution because,
- *   amongst other reasons, it makes it very easy to decide which process a
- *   given row i of the vector belongs to: p = floor(i*k/N).]
+ *       nloc = (n/k) + (p < (n % k))
+ *   rows of the vector, starting at row
+ *       offset = p*(n/k) + min(p, n % k)
+ *   Thus, if k evenly divides n, then each process gets n/k rows; otherwise,
+ *   if the remainder is r = (n % k), then the first r processes get
+ *   floor(n/k)+1 rows, while the remaining processes get floor(n/k) rows each.
+ *   In this way, each process is assigned the same amount of data give or take
+ *   one row.  [This is a "natural" data distribution because, amongst other
+ *   reasons, it makes it very easy to decide which process a given row i of
+ *   the vector belongs to: p = floor(i*k/n).]
  * - For each process, local data is further broken down into "data blocks",
  *   which is an abstraction for a contiguous block of data in memory.  The
  *   blocks need not all be the same size.  This additional complication is
- *   introduced to help optimize the most common use cases for MultiVec's.
+ *   introduced to help optimize the most common use cases for multi-vectors,
+ *   while still providing a proper implementation of the (overly general)
+ *   MultiVec interface.
  * - Overall the data distribution looks schematically as follows:
  *                                 Vectors
  *                  0  1  2  3  4  5  6  7  8  9  10 11 12 13
@@ -32,7 +37,10 @@
  *       ...       |           |              |              |
  *
  *   Each block is a contiguous region of local memory, representing m vectors
- *   each of local length n.
+ *   each of local length nloc, arranged in a nloc-by-m column-major matrix.
+ *
+ * TODO:
+ *  - I'm almost certain that this can be made simpler with a little more thought.
  */
 
 #include <algorithm>
@@ -49,6 +57,8 @@
 #  include <mpi.h>
 #  include <Teuchos_RawMPITraits.hpp>
 #endif
+
+#include "MyMatrix.hpp"
 
 template<typename T>
 static inline int mysgn(T x) {
@@ -67,6 +77,7 @@ static inline bool array_overlap(const T* a, int na, const T* b, int nb) {
     return (x1 == -1) || (x2 == -1);
 }
 
+/* Return the vector [ 0, 1, 2, ..., n-1 ]. */
 static inline std::vector<int> irange(int n) {
     std::vector<int> v(n);
     for(int i = 0; i < n; i++)
@@ -119,31 +130,31 @@ public:
 
     /***** Accessors **********************************************************/
 
-    /* Access elements by local row index i */
-    ScalarType& local(int i, int j) {
-        assert(0 <= i && i < mylength && 0 <= j && j < numvecs);
+    /* Access elements by local row index iloc */
+    ScalarType& local(int iloc, int j) {
+        assert(0 <= iloc && iloc < mylength && 0 <= j && j < numvecs);
         /* Find block that owns vector number j */
         int b = index_to_block_map[j].b;
         int k = index_to_block_map[j].k;
-        return block_starts[b][k*mylength + i];
+        return block_starts[b][k*mylength + iloc];
     }
-
-    const ScalarType& local(int i, int j) const {
-        assert(0 <= i && i < mylength && 0 <= j && j < numvecs);
+    const ScalarType& local(int iloc, int j) const {
+        assert(0 <= iloc && iloc < mylength && 0 <= j && j < numvecs);
         int b = index_to_block_map[j].b;
         int k = index_to_block_map[j].k;
-        return block_starts[b][k*mylength + i];
+        return block_starts[b][k*mylength + iloc];
     }
 
-    /* Access elements by global row index i (read-only) */
+    /* Access elements by global row index i (read-only).  Note this is very
+     * inefficient, and should only be used for debugging and unit testing. */
     ScalarType global(int i, int j) {
         assert(0 <= i && i < length && 0 <= j && j < numvecs);
         ScalarType x;
-        int owner = i*nprocs/length;    // process that owns row i of the multi-vector
-        if(me == owner)
+        int p = i*nprocs/length;        // process that owns row i of the multi-vector
+        if(me == p)
             x = local(i - mystart, j);
 #ifdef OPSEC_USE_MPI
-        MPI_Bcast(&x, 1, Teuchos::RawMPITraits<ScalarType>::type(), owner, MPI_COMM_WORLD);
+        MPI_Bcast(&x, 1, Teuchos::RawMPITraits<ScalarType>::type(), p, MPI_COMM_WORLD);
 #endif
         return x;
     }
@@ -156,7 +167,6 @@ public:
         int k = index_to_block_map[j].k;
         return block_starts[b] + k*mylength;
     }
-
     const ScalarType* vector(int j) const {
         assert(0 <= j && j < numvecs);
         /* Find block that owns vector number j */

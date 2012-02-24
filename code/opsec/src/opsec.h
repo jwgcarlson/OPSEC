@@ -10,6 +10,10 @@
 
 #include "cfg.h"
 
+#ifndef NULL
+#  define NULL 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,14 +36,18 @@ void opsec_abort(int status);
 #ifdef OPSEC_DEBUG
     static void* debug_malloc(size_t size, const char* file, int line) {
         void* ptr = malloc(size);
-        if(ptr == NULL)
+        if(!ptr) {
             fprintf(stderr, "debug_malloc: failed to allocate %zd bytes at line %d of %s\n", size, line, file);
+            opsec_exit(1);
+        }
         return ptr;
     }
     static void* debug_calloc(size_t nmemb, size_t size, const char* file, int line) {
         void* ptr = calloc(nmemb, size);
-        if(ptr == NULL)
+        if(!ptr) {
             fprintf(stderr, "debug_calloc: failed to allocate %zd bytes at line %d of %s\n", nmemb*size, line, file);
+            opsec_exit(1);
+        }
         return ptr;
     }
 #   define opsec_malloc(size) debug_malloc(size, __FILE__, __LINE__)

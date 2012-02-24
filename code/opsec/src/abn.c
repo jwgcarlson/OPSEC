@@ -111,68 +111,66 @@ void abn_byte_swap(char* data, size_t n, const char* fmt) {
     /* Determine the length of each field in the struct */
     numfields = 0;
     p = fmt;
-    for(i = 0; i < n; i++) {
-        while(*p != '\0') {
-            /* Ignore whitespace */
-            while(isspace(*p))
-                p++;
+    while(*p != '\0') {
+        /* Ignore whitespace */
+        while(isspace(*p))
+            p++;
 
-            /* Read (optional) repeat count */
-            while(isdigit(*p)) {
-                numbuf[numbuflen++] = *p;
-                p++;
-            }
-            if(numbuflen == 0)
-                num = 1;
-            else {
-                numbuf[numbuflen] = '\0';
-                num = atoi(numbuf);
-            }
+        /* Read (optional) repeat count */
+        while(isdigit(*p)) {
+            numbuf[numbuflen++] = *p;
+            p++;
+        }
+        if(numbuflen == 0)
+            num = 1;
+        else {
+            numbuf[numbuflen] = '\0';
+            num = atoi(numbuf);
+        }
 
-            switch(*p) {
-                case 'x':
-                case 'c':
-                case 'b':
-                case 'B':
-                    fieldlen = sizeof(char);
-                    break;
+        switch(*p) {
+            case 'x':
+            case 'c':
+            case 'b':
+            case 'B':
+                fieldlen = sizeof(char);
+                break;
 //                case '?':
 //                    fieldlen = sizeof(bool);
 //                    break;
-                case 'h':
-                case 'H':
-                    fieldlen = sizeof(short);
-                    break;
-                case 'i':
-                case 'I':
-                    fieldlen = sizeof(int);
-                    break;
-                case 'l':
-                case 'L':
-                    fieldlen = sizeof(long);
-                    break;
-                case 'q':
-                case 'Q':
-                    fieldlen = sizeof(long long);
-                    break;
-                case 'f':
-                    fieldlen = sizeof(float);
-                    break;
-                case 'd':
-                    fieldlen = sizeof(double);
-                    break;
-                default:
-                    fprintf(stderr, "abn_byte_swap: illegal struct format '%s'\n", fmt);
-                    return;
-            }
-
-            for(j = 0; j < num; j++)
-                fields[numfields++] = fieldlen;
-
-            num = 1;
-            numbuflen = 0;
-            p++;
+            case 'h':
+            case 'H':
+                fieldlen = sizeof(short);
+                break;
+            case 'i':
+            case 'I':
+                fieldlen = sizeof(int);
+                break;
+            case 'l':
+            case 'L':
+                fieldlen = sizeof(long);
+                break;
+            case 'q':
+            case 'Q':
+                fieldlen = sizeof(long long);
+                break;
+            case 'f':
+                fieldlen = sizeof(float);
+                break;
+            case 'd':
+                fieldlen = sizeof(double);
+                break;
+            default:
+                fprintf(stderr, "abn_byte_swap: illegal struct format '%s'\n", fmt);
+                return;
         }
+
+        for(j = 0; j < num; j++)
+            fields[numfields++] = fieldlen;
+
+        num = 1;
+        numbuflen = 0;
+        p++;
     }
 
     /* Iterate through the data array, swapping bytes for each field */
@@ -242,7 +240,7 @@ int abn_read_header(FILE *stream, size_t* n_, size_t* size_, char* endian_, char
     if(n_) *n_ = n;
     if(size_) *size_ = size;
     if(endian_) *endian_ = endian;
-    if(fmt_) strcpy(fmt_, fmt);
+    if(fmt_) strncpy(fmt_, fmt, ABN_MAX_FORMAT_LENGTH);
 
     return 0;
 }

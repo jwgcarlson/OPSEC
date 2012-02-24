@@ -207,11 +207,14 @@ int cfg_read(Config cfg, FILE* f) {
     int err = 0;
     char line[CFG_MAX_LINE_LENGTH];
     if(f == NULL) {
-        fprintf(stderr, "Config: file pointer is NULL\n");
+        fprintf(stderr, "cfg_read: file pointer is NULL\n");
         return CFG_STREAM_ERROR;
     }
-    while(fgets(line, sizeof(line), f) != NULL)
-        err &= cfg_read_line(cfg, line);
+    while(fgets(line, sizeof(line), f) != NULL) {
+        err = cfg_read_line(cfg, line);
+        if(err)
+            break;
+    }
     return err;
 }
 
@@ -219,7 +222,7 @@ int cfg_read_file(Config cfg, const char* filename) {
     int err;
     FILE* f = fopen(filename, "r");
     if(f == NULL) {
-        fprintf(stderr, "Config: could not read file '%s'\n", filename);
+        fprintf(stderr, "cfg_read_file: could not read file '%s'\n", filename);
         return CFG_FILE_ERROR;
     }
     err = cfg_read(cfg, f);
@@ -257,7 +260,7 @@ int cfg_read_line(Config cfg, const char* line) {
     /* Split string on '=' character */
     eqpos = strchr(p, '=');
     if(eqpos == NULL || eqpos == p) {
-        fprintf(stderr, "Config: '%s' is not a valid configuration line\n", line);
+        fprintf(stderr, "cfg_read_line: '%s' is not a valid configuration line\n", line);
         return CFG_PARSE_ERROR;
     }
 

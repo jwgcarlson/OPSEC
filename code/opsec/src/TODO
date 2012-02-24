@@ -9,3 +9,5 @@
   subsequent configuration options have that prefix stripped (mostly useful
   for gmock)
 - (LATER) make code more C++ (exception handling, classes for vectors/matrices)
+- formalize Impl pattern in helper class, ImplWrapper, and make all XXXImpl
+  structs inherit from BaseImpl base class

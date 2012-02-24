@@ -1,6 +1,7 @@
 #ifndef SPLITFILE_H
 #define SPLITFILE_H
 
+#include <cassert>
 #include <cstdio>
 #include <string>
 #include <unistd.h>
@@ -36,6 +37,14 @@ public:
         return (cur_stream != NULL);
     }
 
+    const std::string& get_filename() const {
+        return cur_filename;
+    }
+
+    const std::string& get_base_filename() const {
+        return base_filename;
+    }
+
     void open(const char* filename_, const char* mode_) {
         close();
         base_filename = filename_;
@@ -53,38 +62,48 @@ public:
         if(cur_stream != NULL)
             fclose(cur_stream);
         cur_stream = NULL;
+        cur_filename = "";
     }
 
-    /* Attempt to read up to count bytes from the stream into the buffer
-     * starting at buf.  On success, return the number of bytes read (zero
-     * indicates end of file), and advance the file pointer.  On error return
-     * -1. */
-    ssize_t read(char* buf, size_t count) {
+    /* Read count bytes of data, storing them in the location given by buf.
+     * Return the number of bytes successfully read (this may be less than the
+     * requested count). */
+    size_t read(char* buf, size_t count) {
+        assert(mode.length() >= 1 && mode[0] == 'r');
 //        printf("Reading %zd bytes from %s\n", count, base_filename.c_str());
         size_t ntotal = 0;      // total number of bytes read so far
         while(ntotal < count) {
             /* If we don't have a valid current file, we failed */
-            if(!isopen())
-                return -1;
+            if(!isopen() || ferror(cur_stream))
+                return ntotal;
 
             /* Try to read data from current file */
-            int fd = fileno(cur_stream);
-            ssize_t nread = ::read(fd, buf, count - ntotal);
-            if(nread < 0)
-                return nread;
+            size_t nread = fread(buf, 1, count - ntotal, cur_stream);
             ntotal += (size_t) nread;
             buf += nread;
 //            printf("Read %zd bytes from %s, ntotal = %zd\n", nread, cur_filename.c_str(), ntotal);
 
             /* If we're at the end of the current file and still need more data,
              * try opening the next file */
-            if(nread == 0)
+            if(nread == 0 && feof(cur_stream))
                 open_next();
 
             /* Other exit conditions? */
         }
 
-        return (ssize_t) ntotal;
+        return ntotal;
+    }
+
+    /* Write count bytes of data, from the location given by buf.
+     * Return the number of bytes successfully written (this may be less than
+     * the requested count). */
+    size_t write(char* buf, size_t count) {
+        assert(mode.length() >= 1 && mode[0] == 'w');
+        if(!isopen())
+            return 0;
+        /* TODO: make this fancier, i.e. open a new output file if the current
+         * one will exceed a predefined filesize */
+        return fwrite(buf, 1, count, cur_stream);
     }
 
 private:

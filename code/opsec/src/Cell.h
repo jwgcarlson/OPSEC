@@ -55,10 +55,17 @@
  * structure changes! */
 
 
-/* Coordinate system options */
+/* Coordinate system options. */
 enum {
     CoordSysCartesian = 0,
     CoordSysSpherical = 1
+};
+
+/* A point in either Cartesian or spherical coordinates. */
+struct Point {
+    union { double x1; double x; double r; };
+    union { double x2; double y; double mu; };
+    union { double x3; double z; double phi; };
 };
 
 

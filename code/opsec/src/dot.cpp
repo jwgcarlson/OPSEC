@@ -26,8 +26,11 @@ using std::string;
 using std::vector;
 
 #include "Cell.h"
+#include "Model.h"
+#include "SeparationFunc.h"
 #include "Spline.h"
 #include "Survey.h"
+#include "XiFunc.h"
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
@@ -88,18 +91,15 @@ int main(int argc, char* argv[]) {
 
     /* Read galaxies */
     Survey* survey = InitializeSurvey(cfg);
-    if(survey == NULL) {
-        fprintf(stderr, "dot: error initializing survey\n");
+    if(!survey)
         opsec_exit(1);
-    }
 
-    printf("Initialized survey\n");
     fflush(stdout);
 
-    int Ngals = 0;
-    Galaxy* gals = survey->GetGalaxies(&Ngals);
-    printf("Ngals = %d\n", Ngals);
-    if(gals == NULL || Ngals == 0) {
+    std::vector<Galaxy> gals;
+    survey->GetGalaxies(gals);
+    int Ngals = (int) gals.size();
+    if(Ngals == 0) {
         fprintf(stderr, "dot: error reading galaxies\n");
         opsec_exit(1);
     }
@@ -272,8 +272,8 @@ int main(int argc, char* argv[]) {
     fprintf(fcounts, "# Cell counts\n");
     fprintf(fcounts, "# %g (weighted) galaxies outside any cell\n", counts[Ncells]);
     fprintf(fcounts, "# Columns are:  cell number -- observed count -- expected count -- variance of count\n");
-    double S = (coordsys == "spherical") ? ComputeSignalS(cells[0], cells[0], xi)
-                                         : ComputeSignalC(cells[0], cells[0], xi);
+    double S = (coordsys == "spherical") ? ComputeSignalS(cells[0], cells[0], xi, survey->GetSeparationFunction())
+                                         : ComputeSignalC(cells[0], cells[0], xi, survey->GetSeparationFunction());
     for(int a = 0; a < Ncells; a++) {
 //        double S = (coordsys == "spherical") ? ComputeSignalS(cells[a], cells[a], xi)
 //                                             : ComputeSignalC(cells[a], cells[a], xi);
@@ -283,6 +283,5 @@ int main(int argc, char* argv[]) {
     /* Clean up */
     free(cells);
     free(counts);
-    free(gals);
     return 0;
 }

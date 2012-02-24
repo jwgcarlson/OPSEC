@@ -44,7 +44,6 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include <unistd.h>
 
 #include <AnasaziBasicEigenproblem.hpp>
 #include <AnasaziBasicSort.hpp>
@@ -60,6 +59,7 @@
 #include "Model.h"
 #include "MyMultiVec.h"
 #include "MySignalMatrixOperator.h"
+#include "Survey.h"
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
@@ -154,6 +154,11 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
     XiFunc xi = model->GetXi();
 
+    /* Load survey */
+    Survey* survey = InitializeSurvey(cfg);
+    if(!survey)
+        opsec_exit(1);
+
     /* Open output files on root process */
     FILE* fmode = NULL;
     FILE* feval = NULL;
@@ -193,10 +198,10 @@ int main(int argc, char* argv[]) {
     int num_blocks = std::min(2*nev/block_size, Ncells);
 
     /* Convergence tolerance */
-    double tol = 1e-5;
+    double tol = 1e-4;
 
     /* Maximum number of restarts */
-    int max_restarts = 50;
+    int max_restarts = 1000;
 
     /* Which eigenvalues to solve for (LM = largest magnitude) */
     std::string which = "LM";
@@ -228,7 +233,7 @@ int main(int argc, char* argv[]) {
 
     /* Construct operator */
     Teuchos::RCP<MySignalMatrixOperator<real> > op
-        = Teuchos::rcp(new MySignalMatrixOperator<real>(icoordsys, N1, N2, N3, Ncells, cells, xi));
+        = Teuchos::rcp(new MySignalMatrixOperator<real>(icoordsys, N1, N2, N3, Ncells, cells, xi, survey));
 
     /* Create the eigenproblem */
     Teuchos::RCP<Anasazi::BasicEigenproblem<ST, MV, OP> > problem =
@@ -300,7 +305,7 @@ int main(int argc, char* argv[]) {
         v.resize(Ncells);
 
     /* Determine the local problem length and offset for each process */
-    vector<int> locsizes(nprocs), locdisps(nprocs);
+    std::vector<int> locsizes(nprocs), locdisps(nprocs);
     for(int p = 0; p < nprocs; p++) {
         locsizes[p] = (Ncells/nprocs) + (p < (Ncells % nprocs));
         locdisps[p] = p*(Ncells/nprocs) + std::min(p, Ncells % nprocs);

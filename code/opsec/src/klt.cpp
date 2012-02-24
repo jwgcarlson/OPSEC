@@ -54,6 +54,8 @@ using std::vector;
 
 #include "Cell.h"
 #include "Model.h"
+#include "Survey.h"
+#include "XiFunc.h"
 #include "abn.h"
 #include "cfg.h"
 #include "eig.h"
@@ -122,6 +124,11 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
     XiFunc xi = model->GetXi();
 
+    /* Load survey */
+    Survey* survey = InitializeSurvey(cfg);
+    if(!survey)
+        opsec_exit(1);
+
     printf("(TRACE) Opening output files...\n"); fflush(stdout);
 
     /* Open output files on root process */
@@ -186,7 +193,7 @@ int main(int argc, char* argv[]) {
         int Nr = cfg_get_int(cfg, "Nr");
         int Nmu = cfg_get_int(cfg, "Nmu");
         int Nphi = cfg_get_int(cfg, "Nphi");
-        S = ComputeSignalMatrixS(n, nloc, amin, cells, Nr, Nmu, Nphi, xi, 1e-2);
+        S = ComputeSignalMatrixS(n, nloc, amin, cells, Nr, Nmu, Nphi, xi, survey);
     }
     else if(coordsys == "cartesian") {
         if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
@@ -196,7 +203,7 @@ int main(int argc, char* argv[]) {
         int Nx = cfg_get_int(cfg, "Nx");
         int Ny = cfg_get_int(cfg, "Ny");
         int Nz = cfg_get_int(cfg, "Nz");
-        S = ComputeSignalMatrixC(n, nloc, amin, cells, Nx, Ny, Nz, xi);
+        S = ComputeSignalMatrixC(n, nloc, amin, cells, Nx, Ny, Nz, xi, survey);
     }
 
     /* Number of eigenvalues to compute */

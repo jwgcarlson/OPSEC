@@ -23,6 +23,7 @@ using std::string;
 using std::vector;
 
 #include "Cell.h"
+#include "SelectionFunc.h"
 #include "Survey.h"
 #include "abn.h"
 #include "cfg.h"

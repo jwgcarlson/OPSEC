@@ -11,22 +11,23 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <vector>
 
-#include <string>
-#include <vector>
-using std::string;
-using std::vector;
+#ifdef OPSEC_USE_MPI
+#  include <mpi.h>
+#endif
 
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
 #include "Matrix.h"
 #include "Model.h"
+#include "MyMatrix.hpp"
 #include "SplitFile.h"
 
 const char* usage =
@@ -42,285 +43,183 @@ const char* usage =
     "  mixing=MODE    Mixing matrix choice: identity, inverse (default), or inverse sqrt\n";
 
 /* Read signal-to-noise eigenvalues from file on root process, then broadcast
- * to all processes. */
-real* ReadEvals(const char* evalfile, int* Nmodes_ = NULL) {
+ * to all processes.  The array evals must be able to hold Nevals elements. */
+void ReadEvals(SplitFile& f, int Nevals, real* evals) {
+    int me = 0;
+#ifdef OPSEC_USE_MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
+#endif
+
+    const char* evalfile = f.get_filename().c_str();
+    if(me == 0) {
+        /* Open evalfile */
+        FILE* feval = fopen(evalfile, "rb");
+        if(feval == NULL) {
+            fprintf(stderr, "ReadEvals: error opening evalfile (%s,%d)\n", evalfile, errno);
+            opsec_abort(1);
+        }
+
+        /* Read header */
+        size_t n, size;
+        char endian, fmt[ABN_MAX_FORMAT_LENGTH];
+        Config opts = cfg_new();
+        int err = abn_read_header(feval, &n, &size, &endian, fmt, opts);
+        if(err) {
+            fprintf(stderr, "ReadEvals: error reading header (%s,%d)\n", evalfile, err);
+            opsec_abort(1);
+        }
+        if(size != sizeof(real) || strcmp(fmt, REAL_FMT) != 0) {
+            fprintf(stderr, "ReadEvals: inconsistent data types (%s,%zd,%zd,%s,%s)\n", evalfile, size, sizeof(real), fmt, REAL_FMT);
+            opsec_abort(1);
+        }
+        if((int) n != Nevals) {
+            fprintf(stderr, "ReadEvals: inconsistent evals length (%s,%zd,%d)\n", evalfile, n, Nevals);
+            opsec_abort(1);
+        }
+        cfg_destroy(opts);
+
+        /* Read eigenvalues */
+        size_t nread = fread(evals, sizeof(real), Nevals, feval);
+        if((int) nread != Nevals) {
+            fprintf(stderr, "ReadEvals: error reading data (%s,%zd,%d)\n", evalfile, nread, Nevals);
+            opsec_abort(1);
+        }
+        fclose(feval);
+    }
+
+    /* Broadcast to other processes */
+#ifdef OPSEC_USE_MPI
+    MPI_Bcast(evals, Nevals, REAL_MPI_TYPE, 0, MPI_COMM_WORLD);
+#endif
+}
+
+/* Read pixel values from file, and broadcast to all processes. */
+real* ReadPixels(const char* pixfile, int* Npixels_ = NULL) {
+    int me = 0;
+#ifdef OPSEC_USE_MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
+#endif
+
+    int Npixels = -1;
+    real* pixels = NULL;
+    if(me == 0) {
+        FILE* fpix = fopen(pixfile, "rb");
+        if(fpix == NULL) {
+            fprintf(stderr, "ReadPixels: could not read from file '%s'\n", pixfile);
+        }
+        else {
+            /* File opened successfully */
+            size_t n, size;
+            int err = abn_read(fpix, (void**)&pixels, &n, &size, NULL, NULL, NULL);
+            if(err || pixels == NULL) {
+                fprintf(stderr, "ReadPixels: error reading pixels from '%s'\n", pixfile);
+            }
+            else {
+                /* Pixels read successfully */
+                Npixels = (int) n;
+                if(size != sizeof(real))
+                    fprintf(stderr, "ReadPixels: sanity check fail: size = %zd, sizeof(real) = %zd\n", size, sizeof(real));
+
+            }
+        }
+        fclose(fpix);
+    }
+
+#ifdef OPSEC_USE_MPI
+    /* Broadcast Npixels and pixels to all processes */
+    MPI_Bcast(&Npixels, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if(Npixels >= 0) {
+        if(me != 0)
+            pixels = (real*) opsec_malloc(Npixels*sizeof(real));
+        MPI_Bcast(pixels, Npixels, REAL_MPI_TYPE, 0, MPI_COMM_WORLD);
+    }
+#endif
+
+    if(Npixels_)
+        *Npixels_ = Npixels;
+    return pixels;
+}
+
+/* Read ABN header of covariance matrix derivatives file.  If specified, check
+ * that Nparams and Nmodes have the expected values.  This function should be
+ * run by the root process only. */
+void ReadCovHeader(SplitFile& fcov, int Nparams = -1, int Nmodes = -1) {
+    const char* covfile = fcov.get_filename().c_str();
+
+    size_t n, size;
+    char endian, fmt[ABN_MAX_FORMAT_LENGTH];
+    Config opts = cfg_new();
+    int err = abn_read_header(fcov, &n, &size, &endian, fmt, opts);
+    if(err) {
+        fprintf(stderr, "ReadCovHeader: error reading covfile header (%s,%d)\n", covfile, err);
+        opsec_exit(1);
+    }
+    if(endian != abn_endian()) {
+        fprintf(stderr, "ReadCovHeader: endianness mismatch (%s,%c,%c)\n", covfile, abn_endian(), endian);
+        opsec_exit(1);
+    }
+    if(size != sizeof(real) || strcmp(fmt, REAL_FMT) != 0) {
+        fprintf(stderr, "ReadCovHeader: data type inconsistent (%s,%zd,%zd,%s,%s)\n", covfile, sizeof(real), size, REAL_FMT, fmt);
+        opsec_exit(1);
+    }
+    if(Nparams > 0 && cfg_has_key(opts, "Nparams") && cfg_get_int(opts, "Nparams") != Nparams) {
+        fprintf(stderr, "ReadCovHeader: Nparams inconsistent (%s,%d,%d)\n", covfile, Nparams, cfg_get_int(opts, "Nparams"));
+        opsec_exit(1);
+    }
+    if(Nmodes > 0 && cfg_has_key(opts, "Nmodes") && cfg_get_int(opts, "Nmodes") != Nmodes) {
+        fprintf(stderr, "ReadCovHeader: Nmodes inconsistent (%s,%d,%d)\n", covfile, Nmodes, cfg_get_int(opts, "Nmodes"));
+        opsec_exit(1);
+    }
+    cfg_destroy(opts);
+}
+
+/* Read a symmetric n-by-n matrix from file, and distribute across processes.
+ * The matrix is assumed to be in packed storage, with the n*(n+1)/2 unique
+ * elements arranged in a flat array.  These elements are distributed in the
+ * natural way for a flat array. */
+void ReadSymmetricMatrix(SplitFile& f, int n, real* ap) {
     int nprocs = 1, me = 0;
 #ifdef OPSEC_USE_MPI
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
 #endif
 
-    int Nmodes = -1;
-    real* evals = NULL;
-    if(me == 0) {
-        FILE* feval = fopen(evalfile, "rb");
-        if(feval == NULL) {
-            fprintf(stderr, "ReadEvals: could not read from file '%s'\n", evalfile);
-        }
-        else {
-            /* File successfully opened */
-            Config opts = cfg_new();
-            size_t n, size;
-            int err = abn_read(feval, (void**)&evals, &n, &size, NULL, NULL, opts);
-            if(err || evals == NULL) {
-                fprintf(stderr, "ReadEvals: error reading signal-to-noise eigenvalues from '%s'\n", evalfile);
-            }
-            else {
-                /* Eigenvalues successfully read */
-                int Nmodes = cfg_get_int(opts, "Nmodes");
-                if((int)n != Nmodes)
-                    fprintf(stderr, "ReadEvals: sanity check fail: n = %zd, Nmodes = %d\n", n, Nmodes);
-                if(size != sizeof(real))
-                    fprintf(stderr, "ReadEvals: sanity check fail: size = %zd, sizeof(real) = %zd\n", size, sizeof(real));
-            }
-            fclose(feval);
-            cfg_destroy(opts);
-        }
-    }
+    /* Total number of unique elements in a symmetric matrix */
+    int k = (n*(n+1))/2;
 
+    /* Number of elements belonging to each process (natural partition) */
+    std::vector<int> kloc(nprocs);
+    for(int p = 0; p < nprocs; p++)
+        kloc[p] = (k/nprocs) + (p < (k % nprocs));
+
+    /* Read in matrix elements, and distribute to the appropriate processes */
+    if(me == 0) {
+        /* Read in root process' elements directly to local storage */
+        ssize_t nread = f.read((char*) ap, kloc[0]*sizeof(real));
+        if(nread != kloc[0]*sizeof(real)) {
+            fprintf(stderr, "ReadSymmetricMatrix: read error (%s,%d,%d,%zd)\n", f.get_filename().c_str(), 0, kloc[0], nread);
+            opsec_abort(1);
+        }
 #ifdef OPSEC_USE_MPI
-    /* Broadcast Nmodes and evals to all processes */
-    MPI_Bcast(&Nmodes, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    if(Nmodes >= 0) {
-        if(me != 0)
-            evals = (real*) opsec_malloc(Nmodes*sizeof(real));
-        MPI_Bcast(evals, Nmodes, REAL_MPI_TYPE, 0, MPI_COMM_WORLD);
-    }
-#endif
-
-    if(Nmodes_ != NULL)
-        *Nmodes_ = Nmodes;
-    return evals;
-}
-
-/* Read pixel values from file. */
-real* ReadPixels(const char* pixfile, int* Npixels_ = NULL) {
-    FILE* fpix = fopen(pixfile, "rb");
-    if(fpix == NULL) {
-        fprintf(stderr, "ReadPixels: could not read from file '%s'\n", pixfile);
-        return NULL;
-    }
-
-    size_t n, size;
-    real* pixels = NULL;
-    int err = abn_read(fpix, (void**)&pixels, &n, &size, NULL, NULL, NULL);
-    if(err || pixels == NULL) {
-        fprintf(stderr, "ReadPixels: error reading from '%s'\n", pixfile);
+        /* Temporary storage for other process' elements */
+        real* tmp = (real*) opsec_malloc(kloc[0]*sizeof(real));
+        for(int p = 1; p < nprocs; p++) {
+            nread = f.read((char*) tmp, kloc[p]*sizeof(real));
+            if(nread != kloc[p]*sizeof(real)) {
+                fprintf(stderr, "ReadSymmetricMatrix: read error (%s,%d,%d,%zd)\n", f.get_filename().c_str(), p, kloc[p], nread);
+                opsec_abort(1);
+            }
+            /* Send elements to process p */
+            MPI_Send(tmp, kloc[p], REAL_MPI_TYPE, p, 0, MPI_COMM_WORLD);
+        }
+        free(tmp);
     }
     else {
-        if(size != sizeof(real))
-            fprintf(stderr, "ReadPixels: sanity check fail: size = %zd, sizeof(real) = %zd\n", size, sizeof(real));
-
-        if(Npixels_)
-            *Npixels_ = (int)n;
-    }
-
-    fclose(fpix);
-    return pixels;
-}
-
-/* Read an m-by-n matrix from file, and distribute across processes.  The
- * matrix is distributed by rows.  The local matrix A must have enough memory
- * to store the local portion of the matrix. */
-template<class ScalarType>
-void ReadMatrix(SplitFile& f, int m, int n, MyMatrix<ScalarType>& A, int nprocs = 1, int me = 0) {
-#ifdef OPSEC_DEBUG
-    assert(A.n == n && A.m == (m/nprocs) + (me < (m % nprocs)));
+        /* Receive elements from root process */
+        MPI_Status status;
+        MPI_Recv(ap, kloc[me], REAL_MPI_TYPE, 0, 0, MPI_COMM_WORLD, &status);
 #endif
-
-    /* Compute number of rows owned by each process, and their offsets */
-    std::vector<int> mloc(nprocs), offset(nprocs);
-    for(int p = 0; p < nprocs; p++) {
-        mloc[p] = (m/nprocs) + (p < (m % nprocs));
-        offset[p] = p*(m/nprocs) + std::min(p, m % nprocs);
     }
-
-    if(me == 0) {
-        for(int p = 0; p < nprocs; p++) {
-        }
-    }
-}
-
-/* Read in derivatives of the covariance matrix from file. */
-void ReadDerivatives(const char* covfile, bool multifile, int* Nparams_ = NULL, int* Nmodes_ = NULL) {
-    int Nparams = 0;
-    int Nmodes = 0;
-    real** Cp = NULL;
-    FILE* fcov = NULL;
-    Config opts = NULL;
-    if(!multifile) {
-        /* Single file */
-
-        /* Open file */
-        fcov = fopen(covfile, "rb");
-        if(fcov == NULL) {
-            fprintf(stderr, "ReadDerivatives: could not read from file '%s'\n", covfile);
-            return NULL;
-        }
-
-        /* Read header */
-        opts = cfg_new();
-        size_t n, size;
-        if(abn_read_header(fcov, &n, &size, NULL, NULL, opts) != 0) {
-            fprintf(stderr, "ReadDerivatives: error reading from '%s'\n", covfile);
-            return NULL;
-        }
-
-        /* Set parameters, allocate memory, and read in data */
-        Nparams = cfg_get_int(opts, "Nparams");
-        Nmodes = cfg_get_int(opts, "Nmodes");
-        Cp = (real**) opsec_malloc(Nparams*sizeof(real*));
-        for(int m = 0; m < Nparams; m++) {
-            Cp[m] = (real*) opsec_malloc(Nmodes*Nmodes*sizeof(real));
-            size_t nread = fread(Cp[m], sizeof(real), Nmodes*Nmodes, fcov);
-            if(nread != Nmodes*Nmodes) {
-                fprintf(stderr, "ReadDerivatives: error reading Cp[%d] from '%s'\n", m, covfile);
-                return NULL;
-            }
-        }
-
-        fclose(fcov);
-        cfg_destroy(opts);
-    }
-    else {
-        /* Multi-file */
-
-        char filename[512];
-
-        /* Loop through each file */
-        Nparams = 1;    // this should be set properly after reading the first file
-        for(int m = 0; m < Nparams; m++) {
-            /* Open file */
-            snprintf(filename, sizeof(filename), "%s.%03d", covfile, m);
-            fcov = fopen(filename, "rb");
-            if(fcov == NULL) {
-                fprintf(stderr, "ReadDerivatives: could not read from '%s'\n", filename);
-                return NULL;
-            }
-
-            /* Read header */
-            opts = cfg_new();
-            size_t n, size;
-            if(abn_read_header(fcov, &n, &size, NULL, NULL, opts) != 0) {
-                fprintf(stderr, "ReadDerivatives: error reading from '%s'\n", filename);
-                return NULL;
-            }
-
-            if(m == 0) {
-                /* Use the header of the first file to set parameters */
-                Nparams = cfg_get_int(opts, "Nparams");
-                Nmodes = cfg_get_int(opts, "Nmodes");
-                assert(Nparams > 0 && Nmodes > 0);
-
-                /* TODO: check memory availibility, to make sure there will be no swapping */
-
-                /* Allocate memory for the matrices */
-                Cp = (real**) opsec_malloc(Nparams*sizeof(real*));
-                for(int m = 0; m < Nparams; m++)
-                    Cp[m] = (real*) opsec_malloc(Nmodes*Nmodes*sizeof(real));
-            }
-            else {
-                /* Make sure the parameters for later files match the first file */
-                if(cfg_has_key(opts, "Nparams"))
-                    assert(cfg_get_int(opts, "Nparams") == Nparams);
-                if(cfg_has_key(opts, "Nmodes"))
-                    assert(cfg_get_int(opts, "Nmodes") == Nmodes);
-            }
-
-            /* Read in the data */
-            size_t nread = fread(Cp[m], sizeof(real), Nmodes*Nmodes, fcov);
-            if(nread != Nmodes*Nmodes) {
-                fprintf(stderr, "ReadDerivatives: error reading Cp[%d] from '%s'\n", m, filename);
-                return NULL;
-            }
-
-            cfg_destroy(opts);
-            fclose(fcov);
-        }
-
-    }
-
-    if(Nparams_)
-        *Nparams_ = Nparams;
-    if(Nmodes_)
-        *Nmodes_ = Nmodes;
-
-    return Cp;
-}
-
-void matrix_print(const Matrix<real>& A) {
-    for(int i = 0; i < A.M; i++) {
-        printf("%s[ ", (i == 0) ? "[" : " ");
-        for(int j = 0; j < A.N; j++)
-            printf("% 9.5e ", A(i,j));
-        printf("]%s\n", (i == A.M-1) ? "]" : "");
-    }
-}
-
-/* Return the square root of the symmetric, positive-definite, N-by-N matrix A. */
-Matrix<real> matrix_sqrt(const Matrix<real>& A) {
-    int N = A.M;
-    assert(A.N == N);
-    /* Eigenvalues (output only). */
-    vector<real> w(N);
-    /* On input, the symmetric matrix A.  On output, the orthonormal
-     * eigenvectors of A, stored in column-major format. */
-    Matrix<real> Ut = A;
-    int lwork = 4*N;
-    real* work = (real*)opsec_malloc(lwork*sizeof(real));
-    int info;
-    char jobz = 'V', uplo = 'U';
-    lapack_syev(&jobz, &uplo, &N, &Ut(0,0), &N, &w[0], work, &lwork, &info);
-    if(info != 0) {
-        fprintf(stderr, "matrix_sqrt: lapack_syev returned %d\n", info);
-    }
-    Matrix<real> U = transpose(Ut);
-    
-    /* Multiply U by sqrt(S). */
-    int i, j;
-    #pragma omp parallel for
-    for(i = 0; i < N; i++)
-        w[i] = sqrt(w[i]);
-    #pragma omp parallel for private(j)
-    for(i = 0; i < N; i++)
-        for(j = 0; j < N; j++)
-            U(i,j) *= w[j];
-
-    /* Multiply (U*sqrt(S)) by U^T. */
-    return dot(U, Ut);
-}
-
-/* Return the inverse of the N-by-N matrix A. */
-Matrix<real> matrix_inv(const Matrix<real>& A) {
-    int N = A.M;
-    assert(A.N == N);
-
-    /* On input, the matrix A.  On output, the factors L and U from the LU
-     * factorization A = P*L*U. */
-    real* lu = (real*)opsec_malloc(N*N*sizeof(real));
-    memcpy(lu, &A(0,0), N*N*sizeof(real));
-
-    /* On output, the pivot indices that determine the permutation matrix P. */
-    int* ipiv = (int*)opsec_malloc(N*sizeof(int));
-
-    /* Perform LU factorization on the matrix A. */
-    int info;
-    lapack_getrf(&N, &N, lu, &N, ipiv, &info);
-    if(info != 0) {
-        fprintf(stderr, "matrix_inv: lapack_getrf returned %d\n", info);
-    }
-
-    /* Use the LU factorization to compute the inverse of A. */
-    int lwork = 4*N;
-    real* work = (real*)opsec_malloc(lwork*sizeof(real));
-    lapack_getri(&N, lu, &N, ipiv, work, &lwork, &info);
-    if(info != 0) {
-        fprintf(stderr, "matrix_inv: lapack_getri returned %d\n", info);
-    }
-
-    free(ipiv);
-    free(work);
-    return Matrix<real>(N, N, lu, false);
 }
 
 int main(int argc, char* argv[]) {
@@ -348,217 +247,283 @@ int main(int argc, char* argv[]) {
     const char* pixfile = cfg_get(cfg, "pixfile");
     int Nmodes = cfg_get_int(cfg, "Nmodes");
 
-    int m, n, i, j;
-
-    string mixing = "inverse";
+    std::string mixing = "inverse";
     if(cfg_has_key(cfg, "mixing"))
         mixing = cfg_get(cfg, "mixing");
-
-    /* Determine output format for derivatives; assume single file by default */
-    string comma_output = cfg_has_key(cfg, "comma_output") ? cfg_get(cfg, "comma_output") : "single";
-    bool multifile = (comma_output.substr(0,5) == "multi");
 
     /* Load model, for prior parameter values */
     Model* model = InitializeModel(cfg);
     int Nparams = model->NumParams();
+    std::vector<real> param(Nparams);
+    for(int n = 0; n < Nparams; n++)
+        param[n] = model->GetParam(n);
 
 
-    int m = Nmodes;
-    int n = Nparams;
+    /* Number of coefficients needed for a symmetrix Nmodes-by-Nmodes matrix */
+    int Ncoeff = Nmodes*(Nmodes+1)/2;
 
-    /* Determine the problem size and offset for each process */
-    std::vector<int> mloc(nprocs), offset(nprocs);
+    /* Determine the local size and offset for each process */
+    std::vector<int> locsize(nprocs), locdisp(nprocs);
     for(int p = 0; p < nprocs; p++) {
-        nloc[p] = (m/nprocs) + (p < (m % nprocs));
-        offset[p] = p*(m/nprocs) + std::min(p, m % nprocs);
+        locsize[p] = (Ncoeff/nprocs) + (p < (Ncoeff % nprocs));
+        locdisp[p] = p*(Ncoeff/nprocs) + std::min(p, Ncoeff % nprocs);
     }
+    int mylocsize = locsize[me];
+    int mylocdisp = locdisp[me];
 
-    /* Allocate local storage for matrices and vectors */
-    real* svalues = NULL;       // signal-to-noise eigenvalues, allocated by ReadEvals()
-    real* dvalues = (real*) opsec_malloc(n*m*mloc[me]*sizeof(real));    // covariance matrix derivatives
-    real* rvalues = (real*) opsec_malloc(m*mloc[me]*sizeof(real));      // residue matrix
 
-    /* Read signal-to-noise eigenvalues $s_i$ */
-    int Nmodes_check;
-    svalues = ReadEvals(evalfile, &Nmodes_check);
-    if(svalues == NULL || Nmodes_check != Nmodes) {
-        fprintf(stderr, "estimate-mpi: error reading signal-to-noise eigenvalues\n");
-        opsec_exit(1);
+    /***** Memory allocation **************************************************/
+
+    /* Signal-to-noise eigenvalues $\lambda_i$ will be distributed to all
+     * processes. */
+    real* lvalues = (real*) opsec_malloc(Nmodes*sizeof(real));
+
+    /* Covariance matrix derivatives will be distributed across processes, with
+     * process p getting locsize[p] of the Nmodes*(Nmodes+1)/2 elements.  The
+     * kth value stored by process p (0 <= k < locsize[p]) will be element
+     * number
+     *   r = locdisp[p] + k
+     * overall, corresponding to the matrix element D_{ij} with
+     *   r = i*(i+1)/2 + j */
+    real* dvalues = (real*) opsec_malloc(Nparams*mylocsize*sizeof(real));
+    for(int m = 0; m < Nparams; ++m)
+        for(int k = 0; k < mylocsize; ++k)
+            dvalues[m*mylocsize + k] = -1;
+
+    /* Residue matrix, symmetric, distributed among processes as above.
+     * Initialized to zero. */
+    real* rvalues = (real*) opsec_calloc(mylocsize, sizeof(real));
+
+    /* Fisher matrix F_{mn}, quadratic estimates q_n, and bias component f_n */
+    real* fvalues = (real*) opsec_calloc(Nparams*(Nparams+2), sizeof(real));
+
+    /* Mixing matrix M_{mn} */
+    real* mvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
+
+    /* Starting and ending local indices for packed symmetric matrix */
+    PackedMatrixIndex kbegin(Nmodes, mylocdisp);
+    PackedMatrixIndex kend(Nmodes, mylocdisp + mylocsize);
+
+
+    /***** Read data from file ************************************************/
+
+    /* Read signal-to-noise eigenvalues $\lambda_i$ into lvalues array */
+    SplitFile feval(evalfile, "r");
+    ReadEvals(feval, Nmodes, lvalues);
+    MyVector<real> lambda(Nmodes, lvalues);
+    feval.close();
+
+    /* Read covariance matrix derivatives $D_m$ into packed matrices */
+    SplitFile fcov;
+    if(me == 0) {
+        /* Open file */
+        fcov.open(covfile, "r");
+        if(!fcov) {
+            fprintf(stderr, "estimate-mpi: cannot open covfile (%s)\n", covfile);
+            opsec_abort(1);
+        }
+        /* Read header */
+        ReadCovHeader(fcov, Nparams, Nmodes);
     }
+    for(int m = 0; m < Nparams; m++)
+        ReadSymmetricMatrix(fcov, Nmodes, &dvalues[m*mylocsize]);
+    if(me == 0)
+        fcov.close();
 
-    /* Read covariance matrix derivatives $C_{,m}$ */
-    int Nparams_check;
-    real** D = ReadDerivatives(covfile, multifile, &Nparams_check, &Nmodes_check);
-    if(D == NULL || Nparams_check != Nparams || Nmodes_check != Nmodes) {
-        fprintf(stderr, "estimate: error reading covariance derivatives\n");
-        opsec_exit(1);
-    }
+    /* Load matrix values into vectors */
+    std::vector<MyVector<real> > D(Nparams);
+    for(int m = 0; m < Nparams; m++)
+        D[m] = MyVector<real>(mylocsize, &dvalues[m*mylocsize]);
 
-    /* Compute diagonal elements of covariance matrix $C_{ii} = 1 + \lambda_i$ */
-    for(i = 0; i < Nmodes; i++)
-        c[i] = 1. + c[i];
+    /* Print C,m */
+    for(int m = 0; m < Nparams; m++)
+        for(PackedMatrixIndex k = kbegin; k < kend; ++k)
+            printf("Process %d: D[%d](%d,%d) = %g\n", me, m, k.i, k.j, D[m][k]);
 
-    /* Read pixel values $y_i$ */
+    /* Read pixel values $y_i$ into yvalues */
     int Npixels;
-    real* y = ReadPixels(pixfile, &Npixels);
-    if(y == NULL || Npixels != Nmodes) {
+    real* yvalues = ReadPixels(pixfile, &Npixels);
+    if(yvalues == NULL || Npixels != Nmodes) {
         fprintf(stderr, "estimate: error reading pixel values\n");
         opsec_exit(1);
     }
+    MyVector<real> y(Npixels, yvalues);
 
-    real pn, *Dm, *Dn;
+    /* Compute diagonal elements of covariance matrix,
+     *   C_{ii} = 1 + \lambda_i */
+    MyVector<real> C(Nmodes, lvalues);
+    for(int i = 0; i < Nmodes; i++)
+        C[i] = 1. + lambda[i];
 
-    /* Compute residue matrix $R_{ij} = C_{ij} - \sum_n C_{ij,n} p_n$ */
-    real* R = (real*) calloc(Nmodes*Nmodes, sizeof(real));      // initialize to 0's
-    for(i = 0; i < Nmodes; i++)
-        R[i*Nmodes + i] = c[i];
-    for(n = 0; n < Nparams; n++) {
-        Dn = D[n];
-        pn = model->GetParam(n);
-        #pragma omp parallel for private(j)
-        for(i = 0; i < Nmodes; i++)
-            for(j = 0; j < Nmodes; j++)
-                R[i*Nmodes + j] -= Dn[i*Nmodes + j] * pn;
+    /* Compute residue matrix $R_{ij} = C_{ij} - \sum_n p_n C_{ij,n}$ */
+    MyVector<real> R(mylocsize, rvalues);       // rvalues initialized to zero, so R_{ij} = 0
+    for(PackedMatrixIndex k = kbegin; k < kend; ++k) {
+        int i = k.i, j = k.j;
+        if(i == j)
+            R[k] += C[i];                   // R_{ij} += C_{ij}
+        for(int n = 0; n < Nparams; n++)
+            R[k] -= param[n] * D[n][k];     // R_{ij} -= p_n C_{ij,n}
     }
 
-    /* Pre-multiply covariance matrix derivatives by $C^{-1}$ */
-    #pragma omp parallel for private(i,j,Dn)
-    for(n = 0; n < Nparams; n++) {
-        Dn = D[n];
-        for(i = 0; i < Nmodes; i++)
-            for(j = 0; j < Nmodes; j++)
-                Dn[i*Nmodes + j] /= c[i];
-    }
+    /* Invert covariance matrix (it's diagonal and positive definite, so no worries) */
+    MyVector<real> Cinv(Nmodes, lvalues);
+    for(int i = 0; i < Nmodes; i++)
+        Cinv[i] = 1/C[i];
 
     /* Compute Fisher matrix $F_{mn} = (1/2) \Tr[C^{-1} C_{,m} C^{-1} C_{,n}]$ */
-    Matrix<real> F(Nparams, Nparams);
-    #pragma omp parallel for private(m,n,i,j,Dm,Dn)
-    for(int mn = 0; mn < Nparams*Nparams; mn++) {
-        m = mn / Nparams;
-        n = mn % Nparams;
-        if(n > m)
-            continue;
-        Dm = D[m];
-        Dn = D[n];
-        F(m,n) = 0;
-        for(i = 0; i < Nmodes; i++)
-            for(j = 0; j < Nmodes; j++)
-                F(m,n) += Dm[i*Nmodes + j] * Dn[j*Nmodes + i];
-        F(m,n) *= 0.5;
+    MyMatrix<real> F(Nparams, Nparams, fvalues);
+    #pragma omp parallel for
+    for(int m = 0; m < Nparams; m++) {
+        for(int n = 0; n <= m; n++) {
+            real Fmn = 0;
+            for(PackedMatrixIndex k = kbegin; k < kend; ++k) {
+                int i = k.i, j = k.j;
+                real mult = (i == j) ? 0.5 : 1.;      // multiplicative factor, 1 or 1/2
+                Fmn += mult * Cinv[i] * D[m][k] * Cinv[j] * D[n][k];
+            }
+            F(m,n) = Fmn;
+        }
     }
-    for(m = 0; m < Nparams; m++)
-        for(n = m+1; n < Nparams; n++)
+    for(int m = 0; m < Nparams; m++)
+        for(int n = m+1; n < Nparams; n++)
             F(m,n) = F(n,m);
 
-    /* Post-multiply $D_n = C^{-1} C_{,n}$ by $C^{-1}$ */
-    #pragma omp parallel for private(i,j,Dn)
-    for(n = 0; n < Nparams; n++) {
-        Dn = D[n];
-        for(i = 0; i < Nmodes; i++)
-            for(j = 0; j < Nmodes; j++)
-                Dn[i*Nmodes + j] /= c[j];
+    /* Compute bias corrections $f_n = (1/2) Tr[C^{-1} C_{,n} C^{-1} R]$ */
+    MyVector<real> f(Nparams, &fvalues[Nparams*Nparams]);
+    #pragma omp parallel for
+    for(int n = 0; n < Nparams; n++) {
+        real fn = 0;
+        for(PackedMatrixIndex k = kbegin; k < kend; ++k) {
+            int i = k.i, j = k.j;
+            real mult = (i == j) ? 0.5 : 1.;      // multiplicative factor, 1 or 1/2
+            fn += mult * Cinv[i] * D[n][k] * Cinv[j] * R[k];
+        }
+        f[n] = fn;
     }
 
     /* Compute quadratic estimators $q_n = (1/2) y^T C^{-1} C_{,n} C^{-1} y$ */
-    Matrix<real> q(Nparams, 1);
-    #pragma omp parallel for private(i,j,Dn)
-    for(n = 0; n < Nparams; n++) {
-        q(n) = 0;
-        Dn = D[n];
-        for(i = 0; i < Nmodes; i++)
-            for(j = 0; j < Nmodes; j++)
-                q(n) += y[i] * Dn[i*Nmodes + j] * y[j];
-        q(n) *= 0.5;
+    MyVector<real> q(Nparams, &fvalues[Nparams*(Nparams+1)]);
+    #pragma omp parallel for
+    for(int n = 0; n < Nparams; n++) {
+        real qn = 0;
+        for(PackedMatrixIndex k = kbegin; k < kend; ++k) {
+            int i = k.i, j = k.j;
+            real mult = (i == j) ? 0.5 : 1.;      // multiplicative factor, 1 or 1/2
+            qn += mult * y[i] * Cinv[i] * D[n][k] * Cinv[j] * y[j];
+        }
+        q[n] = qn;
     }
 
-    /* Compute bias corrections $f_n = (1/2) Tr[C^{-1} C_{,n} C^{-1} R]$ */
-    Matrix<real> f(Nparams, 1);
-    #pragma omp parallel for private(i,j,Dn)
-    for(n = 0; n < Nparams; n++) {
-        f(n) = 0;
-        Dn = D[n];
-        for(i = 0; i < Nmodes; i++)
-            for(j = 0; j < Nmodes; j++)
-                f(n) += Dn[i*Nmodes + j] * R[j*Nmodes + i];
-        f(n) *= 0.5;
+    /* Reduce all results to root process */
+    if(me == 0)
+        MPI_Reduce(MPI_IN_PLACE, fvalues, Nparams*(Nparams+2), REAL_MPI_TYPE, MPI_SUM, 0, MPI_COMM_WORLD);
+    else
+        MPI_Reduce(fvalues, NULL, Nparams*(Nparams+2), REAL_MPI_TYPE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    /* Free storage that is no longer needed */
+    free(lvalues);
+    free(yvalues);
+    free(dvalues);
+    free(rvalues);
+    if(me != 0)
+        free(fvalues);
+
+    /* Let the root process finish the rest */
+    if(me == 0) {
+        real* mvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
+        real* wvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
+        real* tvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
+        real* pvalues = (real*) opsec_malloc(Nparams*(Nparams+1)*sizeof(real));
+
+        /* Choose mixing matrix */
+        MyMatrix<real> M(Nparams, Nparams, mvalues);
+        if(mixing.substr(0, 7) == "inverse") {
+            inverse(F, M);              // M = F^{-1}
+            if(mixing == "inverse sqrt")
+                sqrtm(M, M);            // M = F^{-1/2}
+        }
+        else if(mixing == "identity") {
+            for(int m = 0; m < Nparams; m++)
+                for(int n = 0; n < Nparams; n++)
+                    M(m,n) = (m == n);  // M = identity
+        }
+        else {
+            fprintf(stderr, "estimate-mpi: unrecognized option: mixing = '%s'\n", mixing.c_str());
+            opsec_exit(1);
+        }
+
+        /* Compute window matrix */
+        MyMatrix<real> W(Nparams, Nparams, wvalues);
+        multiply(M, F, W);      // W = M*F
+
+        /* ... and normalize M so that the rows of W sum to unity */
+        real rowsum;
+        for(int m = 0; m < Nparams; m++) {
+            rowsum = 0;
+            for(int n = 0; n < Nparams; n++)
+                rowsum += W(m,n);
+            for(int n = 0; n < Nparams; n++)
+                M(m,n) /= rowsum;
+        }
+        multiply(M, F, W);      // W = M*F
+
+        /* Compute power estimates */
+        MyVector<real> phat(Nparams, pvalues);
+        axpy(-1., f, q);         // q = q - f
+        multiply(M, q, phat);   // \hat{p} = M*(q-f)
+
+        /* ... and their covariance matrix */
+        MyMatrix<real> tmp(Nparams, Nparams, tvalues);
+        MyMatrix<real> pcov(Nparams, Nparams, &pvalues[Nparams]);
+        multiply(M, F, tmp);
+        multiply(tmp, M.transpose(), pcov);
+
+        /* Print them out */
+        printf("p_n          error\n");
+        for(int n = 0; n < Nparams; n++)
+            printf("%e %e\n", phat[n], sqrt(pcov(n,n)));
+
+        /* Write everything to binary file */
+        FILE* fest = fopen(estfile, "wb");
+        if(fest == NULL) {
+            fprintf(stderr, "estimate: could not open '%s' for writing\n", estfile);
+            opsec_exit(1);
+        }
+
+        fprintf(fest, "# Parameter estimates and associated matrices.\n");
+        fprintf(fest, "# This file consists of several consecutive real-valued binary arrays:\n");
+        fprintf(fest, "# - parameter estimates $\\hat{p}_n$ (vector of length Nparams)\n");
+        fprintf(fest, "# - covariance matrix $Cov[\\hat{p}_m,\\hat{p}_n]$ (Nparams-by-Nparams matrix)\n");
+        fprintf(fest, "# - Fisher matrix $F_{mn}$ (Nparams-by-Nparams matrix)\n");
+        fprintf(fest, "# - window matrix $W_{mn}$ (Nparams-by-Nparams matrix)\n");
+        fprintf(fest, "# - mixing matrix $M_{mn}$ (Nparams-by-Nparams matrix)\n");
+        fprintf(fest, "# - quadratic combinations $q_n$ (vector of length Nparams)\n");
+        fprintf(fest, "# - bias corrections $f_n$ (vector of length Nparams)\n");
+
+        Config opts = cfg_new();
+        cfg_set_int(opts, "Nparams", Nparams);
+
+        abn_write(fest, &phat[0], Nparams, REAL_FMT, opts);
+        abn_write(fest, &pcov(0,0), Nparams*Nparams, REAL_FMT, NULL);
+        abn_write(fest, &F(0,0), Nparams*Nparams, REAL_FMT, NULL);
+        abn_write(fest, &W(0,0), Nparams*Nparams, REAL_FMT, NULL);
+        abn_write(fest, &M(0,0), Nparams*Nparams, REAL_FMT, NULL);
+        abn_write(fest, &q[0], Nparams, REAL_FMT, NULL);
+        abn_write(fest, &f[0], Nparams, REAL_FMT, NULL);
+
+        F.print();
+        W.print();
+        M.print();
+
+        cfg_destroy(opts);
+        fclose(fest);
+        free(mvalues);
+        free(wvalues);
+        free(pvalues);
+        free(tvalues);
+        free(fvalues);
     }
 
-    /* Free up memory */
-    free(c);
-    c = NULL;
-    for(m = 0; m < Nparams; m++)
-        free(D[m]);
-    free(D);
-    D = NULL;
-
-    /* Choose mixing matrix */
-    Matrix<real> M;
-    if(mixing == "inverse sqrt")
-        M = matrix_inv(matrix_sqrt(F));
-    else if(mixing == "inverse")
-        M = matrix_inv(F);
-    else if(mixing == "identity")
-        M = identity<real>(Nparams);
-    else {
-        fprintf(stderr, "estimate: unrecognized option: mixing = '%s'\n", mixing.c_str());
-        fprintf(stderr, "estimate: using inverse\n");
-        M = matrix_inv(F);
-    }
-
-    /* Compute window matrix */
-    Matrix<real> W = dot(M, F);
-
-    /* ... and normalize it */
-    real rowsum;
-    #pragma omp parallel for private(n,rowsum)
-    for(m = 0; m < Nparams; m++) {
-        rowsum = 0;
-        for(n = 0; n < Nparams; n++)
-            rowsum += W(m,n);
-        for(n = 0; n < Nparams; n++)
-            M(m,n) /= rowsum;
-    }
-    W = dot(M, F);
-
-    /* Compute power estimates */
-    Matrix<real> phat = dot(M, q - f);
-    Matrix<real> cov = dot(M, dot(F, transpose(M)));
-
-    /* Print them out */
-    printf("p_n          error\n");
-    for(n = 0; n < Nparams; n++)
-        printf("%e %e\n", phat(n), sqrt(cov(n,n)));
-
-    /* Write everything to binary file */
-    FILE* fest = fopen(estfile, "wb");
-    if(fest == NULL) {
-        fprintf(stderr, "estimate: could not open '%s' for writing\n", estfile);
-        opsec_exit(1);
-    }
-
-    fprintf(fest, "# Parameter estimates and associated matrices.\n");
-    fprintf(fest, "# This file consists of several consecutive real-valued binary arrays:\n");
-    fprintf(fest, "# - parameter estimates $\\hat{p}_n$ (vector of length Nparams)\n");
-    fprintf(fest, "# - covariance matrix $Cov[\\hat{p}_m,\\hat{p}_n]$ (Nparams-by-Nparams matrix)\n");
-    fprintf(fest, "# - Fisher matrix $F_{mn}$ (Nparams-by-Nparams matrix)\n");
-    fprintf(fest, "# - window matrix $W_{mn}$ (Nparams-by-Nparams matrix)\n");
-    fprintf(fest, "# - mixing matrix $M_{mn}$ (Nparams-by-Nparams matrix)\n");
-    fprintf(fest, "# - quadratic combinations $q_n$ (vector of length Nparams)\n");
-    fprintf(fest, "# - bias corrections $f_n$ (vector of length Nparams)\n");
-
-    Config opts = cfg_new();
-    cfg_set_int(opts, "Nparams", Nparams);
-
-    abn_write(fest, &phat[0], Nparams, REAL_FMT, opts);
-    abn_write(fest, &cov[0], Nparams*Nparams, REAL_FMT, NULL);
-    abn_write(fest, &F[0], Nparams*Nparams, REAL_FMT, NULL);
-    abn_write(fest, &W[0], Nparams*Nparams, REAL_FMT, NULL);
-    abn_write(fest, &M[0], Nparams*Nparams, REAL_FMT, NULL);
-    abn_write(fest, &q[0], Nparams, REAL_FMT, NULL);
-    abn_write(fest, &f[0], Nparams, REAL_FMT, NULL);
-
-    cfg_destroy(opts);
-    fclose(fest);
-
+    MPI_Finalize();
     return 0;
 }
