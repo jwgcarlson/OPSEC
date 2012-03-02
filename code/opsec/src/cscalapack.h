@@ -5,6 +5,14 @@
 extern "C" {
 #endif
 
+/***** BLACS/PBLAS/ScaLAPACK prototypes **************************************/
+
+/* ScaLAPACK redistribution routine */
+void Cpdgemr2d(int m, int n,
+               double* a, int ia, int ja, int* desca,
+               double* b, int ib, int jb, int* descb,
+               int ictxt);
+
 /* BLACS Initialization */
 void Cblacs_pinfo    (int *, int *);
 void Cblacs_setup    (int *, int *);
@@ -932,7 +940,7 @@ extern int indxl2g_(int *indxloc, int *nb, int *iproc, int *isrcproc, int *nproc
 extern int infog1l_(int *gindx, int *nb, int *nprocs, int *myroc, int *isrcproc, int *lindx, int *rocsrc);
 extern int infog2l_(int *grindx, int *gcindx, int *desc, int *nprow, int *npcol, int *myrow, int *mycol, int *lrindx, int *lcindx, int *rsrc, int *csrc);
 extern int npreroc_(int *n, int *nb, int *iproc, int *isrcproc, int *nprocs);
-extern int numroc_(int *n, int *nb, int *iproc, int *isrcproc, int *nprocs);
+extern int numroc_(const int *n, const int *nb, const int *iproc, const int *isrcproc, const int *nprocs);
 //extern int pcchekpad_(int *ictxt, char *mess, int *m, int *n, complex *a, int *lda, int *ipre, int *ipost, complex *chkval, int mess_len);
 //extern int pccol2row_(int *ictxt, int *m, int *n, int *nb, complex *vs, int *ldvs, complex *vd, int *ldvd, int *rsrc, int *csrc, int *rdest, int *cdest, complex *work);
 //extern int pcelget_(char *scope, char *top, complex *alpha, complex *a, int *ia, int *ja, int *desca, int scope_len, int top_len);

@@ -435,6 +435,23 @@ int cfg_get_format(Config cfg, const char* key, const char* fmt, ...) {
     return nread;
 }
 
+int cfg_get_enum(Config cfg, const char* key, ...) {
+    char* e;            // tag part of (tag,enum) pair
+    int i;              // enum part of (tag,enum) pair
+    const char* s = cfg_get(cfg, key);
+    int n = strlen(s);
+    va_list ap;
+    va_start(ap, key);
+    while(1) {
+        e = va_arg(ap, char*);
+        i = va_arg(ap, int);
+        if(e == NULL || strlen(e) == 0 || strncmp(s, e, n) == 0)
+            break;
+    }
+    va_end(ap);
+    return i;
+}
+
 #if 0
 /* Get the specified configuration option, returning an error code if the
  * configuration key is not present or if the associated value cannot be

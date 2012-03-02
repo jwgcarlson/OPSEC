@@ -5,14 +5,12 @@
 #  include <opsec_config.h>
 #endif
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "cfg.h"
-
-#ifndef NULL
-#  define NULL 0
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,31 +29,31 @@ void opsec_exit(int status);
 /* Abort OPSEC abruptly and loudly. */
 void opsec_abort(int status);
 
+/* Convenience routines for logging status and error messages:
+ *   opsec_info: general status messages (stdout, always)
+ *   opsec_debug: debugging-related messages (stdout, OPSEC_DEBUG only)
+ *   opsec_warn: warning messages (stderr, OPSEC_WARN only)
+ *   opsec_error: error messages (stderr, always)
+ * These routines are to be used as replacements for printf.  For MPI programs,
+ * messages will only be printed on the root process. */
+int opsec_info(const char *format, ...);
+int opsec_debug(const char *format, ...);
+int opsec_warn(const char *format, ...);
+int opsec_error(const char *format, ...);
+
+/* Generic print function used by the above convenience routines. */
+int opsec_vfprintf(FILE* stream, const char *format, va_list ap);
+
 
 /* Verbose wrappers around standard memory allocation routines */
 #ifdef OPSEC_DEBUG
-    static void* debug_malloc(size_t size, const char* file, int line) {
-        void* ptr = malloc(size);
-        if(!ptr) {
-            fprintf(stderr, "debug_malloc: failed to allocate %zd bytes at line %d of %s\n", size, line, file);
-            opsec_exit(1);
-        }
-        return ptr;
-    }
-    static void* debug_calloc(size_t nmemb, size_t size, const char* file, int line) {
-        void* ptr = calloc(nmemb, size);
-        if(!ptr) {
-            fprintf(stderr, "debug_calloc: failed to allocate %zd bytes at line %d of %s\n", nmemb*size, line, file);
-            opsec_exit(1);
-        }
-        return ptr;
-    }
-#   define opsec_malloc(size) debug_malloc(size, __FILE__, __LINE__)
-#   define opsec_calloc(nmemb, size) debug_calloc(nmemb, size, __FILE__, __LINE__)
+#   define opsec_malloc(size) opsec_debug_malloc(size, __FILE__, __LINE__)
+#   define opsec_calloc(nmemb, size) opsec_debug_calloc(nmemb, size, __FILE__, __LINE__)
 #else
 #   define opsec_malloc(size) malloc(size)
 #   define opsec_calloc(nmemb, size) calloc(nmemb, size)
 #endif
+
 
 /* Choose between single and double precision */
 #ifdef OPSEC_SINGLE

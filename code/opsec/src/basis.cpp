@@ -17,6 +17,10 @@
 #include <cstring>
 #include <unistd.h>
 
+#ifdef OPSEC_USE_MPI
+#  include <mpi.h>
+#endif
+
 #include <string>
 #include <vector>
 using std::string;
@@ -46,14 +50,8 @@ const char* usage =
     "  Nr,Nmu,Nphi,RMin,RMax,MuMin,MuMax,PhiMin,PhiMax\n"
     "                Required if coordsys == 'spherical'\n";
 
-#if 0
-void exit_basis(int status) {
-    exit(status);
-}
-#endif
-
-/* Compute the effective volume of and the expected number of galaxies within
- * the cell.  Return true if the cell should be kept, false if it should be
+/* Compute the effective volume and the expected number of galaxies within the
+ * cell.  Return true if the cell should be kept, false if it should be
  * discarded. */
 bool FinalizeCellS(Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double epsabs = 1e-10) {
     const int lg2n_min = 6, lg2n_max = 30;
@@ -101,7 +99,7 @@ bool FinalizeCellS(Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double ep
     double fzero = double(numzero)/double(n);
 
     /* Keep cell only if nbar is nonzero over a significant fraction of the volume */
-    if(fzero > 0.2)
+    if(fzero == 1.)
         return false;
     else {
         c.Veff = (1 - fzero) * V;
@@ -157,7 +155,7 @@ bool FinalizeCellC(Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double ep
     double fzero = double(numzero)/double(n);
 
     /* Keep cell only if nbar is nonzero over a significant fraction of the volume */
-    if(fzero > 0.2)
+    if(fzero == 1.)
         return false;
     else {
         c.Veff = (1 - fzero) * V;
@@ -166,115 +164,81 @@ bool FinalizeCellC(Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double ep
     }
 }
 
+bool FinalizeCell(int coordsys, Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double epsabs = 1e-10) {
+    if(coordsys == CoordSysSpherical)
+        return FinalizeCellS(c, nbar, epsrel, epsabs);
+    else if(coordsys == CoordSysCartesian)
+        return FinalizeCellC(c, nbar, epsrel, epsabs);
+    else {
+        opsec_error("FinalizeCell: coordsys = %d\n", coordsys);
+        return false;
+    }
+}
+
 
 int main(int argc, char* argv[]) {
-    Config cfg = opsec_init(argc, argv, usage);
-#if 0
-    Config cfg = cfg_new();
-
-    /* Parse command line switches */
-    int opt;
-    const char* optstring = "hc:";
-    while((opt = getopt(argc, argv, optstring)) != -1) {
-        switch(opt) {
-        case 'h':
-            fputs(usage, stdout);
-            return 0;
-        case 'c':
-            cfg_read_file(cfg, optarg);
-            break;
-        default:
-            fputs(usage, stderr);
-            return 1;
-        }
-    }
-
-    /* Parse additional command line options */
-    for(int i = optind; i < argc; i++)
-        cfg_read_line(cfg, argv[i]);
+    /* Initialize MPI, if available */
+    int nprocs = 1, me = 0;
+#ifdef OPSEC_USE_MPI
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
 #endif
 
-    /* Debugging... */
-//    printf("# Config options\n");
-//    cfg_write(cfg, stdout);
-//    printf("\n");
+    /* This is a simple serial job, so only run on root process */
+    if(me != 0)
+        return 0;
+
+    /* Parse command line and configuration options */
+    Config cfg = opsec_init(argc, argv, usage);
 
     /* Open output file first, to make sure we will be able to write */
     if(!cfg_has_key(cfg, "cellfile")) {
-        fprintf(stderr, "basis: missing config option 'cellfile'\n");
-//        return 1;
+        opsec_error("basis: missing config option 'cellfile'\n");
         opsec_exit(1);
     }
     const char* cellfile = cfg_get(cfg, "cellfile");
     FILE* fcells = fopen(cellfile, "w");
     if(!fcells) {
-        fprintf(stderr, "basis: cannot write cells to file '%s'\n", cellfile);
-//        return 1;
+        opsec_error("basis: cannot write to '%s'\n", cellfile);
         opsec_exit(1);
     }
 
-    string coordsys = cfg_get(cfg, "coordsys");
-    if(coordsys != "spherical" && coordsys != "cartesian") {
-        fprintf(stderr, "basis: invalid or missing config option 'coordsys'\n");
-//        return 1;
+    int coordsys = cfg_get_enum(cfg, "coordsys", "cartesian", CoordSysCartesian,
+                                                 "spherical", CoordSysSpherical,
+                                                 "", -1);
+    if(coordsys == -1) {
+        opsec_error("basis: invalid or missing config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
         opsec_exit(1);
     }
 
     /* Initialize selection function */
     Survey* survey = InitializeSurvey(cfg);
     if(survey == NULL)
-//        exit_basis(1);
         opsec_exit(1);
     SelectionFunc nbar = survey->GetSelectionFunction();
 
     vector<Cell> cells;
     int Ncells = 0;
 
-    if(coordsys == "spherical") {
+    int N1, N2, N3;
+    double Min1, Max1, Min2, Max2, Min3, Max3;
+    Config opts = cfg_new();
+    if(coordsys == CoordSysSpherical) {
         if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi,RMin,RMax,MuMin,MuMax,PhiMin,PhiMax", ",")) {
-            fprintf(stderr, "basis: must provide config options N{r,mu,phi} and {R,Mu,Phi}{Min,Max}\n");
-//            return 1;
+            opsec_error("basis: must provide config options N{r,mu,phi} and {R,Mu,Phi}{Min,Max}\n");
             opsec_exit(1);
         }
 
-        int Nr = cfg_get_int(cfg, "Nr");
-        int Nmu = cfg_get_int(cfg, "Nmu");
-        int Nphi = cfg_get_int(cfg, "Nphi");
-        double RMin = cfg_get_double(cfg, "RMin");
-        double RMax = cfg_get_double(cfg, "RMax");
-        double MuMin = cfg_get_double(cfg, "MuMin");
-        double MuMax = cfg_get_double(cfg, "MuMax");
-        double PhiMin = cfg_get_double(cfg, "PhiMin");
-        double PhiMax = cfg_get_double(cfg, "PhiMax");
-
-        /* Populate list of cells */
-        Cell c;
-        int d, e, f;
-        #pragma omp parallel for private(c,d,e,f)
-        for(d = 0; d < Nr; d++) {
-            c.rmin = RMin +     d*(RMax - RMin)/Nr;   // this choice of linear radial spacing is consistent with the assumptions in dot.cpp
-            c.rmax = RMin + (d+1)*(RMax - RMin)/Nr;
-            for(e = 0; e < Nmu; e++) {
-                c.mumin = MuMin +     e*(MuMax - MuMin)/Nmu;
-                c.mumax = MuMin + (e+1)*(MuMax - MuMin)/Nmu;
-                for(f = 0; f < Nphi; f++) {
-                    c.phimin = PhiMin +     f*(PhiMax - PhiMin)/Nphi;
-                    c.phimax = PhiMin + (f+1)*(PhiMax - PhiMin)/Nphi;
-                    c.G = f + Nphi*e + Nmu*Nphi*d;
-
-                    if(FinalizeCellS(c, nbar, 1e-4, 1e-12)) {
-                        #pragma omp critical (cells_update)
-                        {
-                            c.a = Ncells++;
-                            cells.push_back(c);
-                        }
-                    }
-                }
-            }
-        }
-
-        printf("Got %d non-empty cells out of %d possible.\n", Ncells, Nr*Nmu*Nphi);
-        printf("Writing list of cells to '%s'.\n", cellfile);
+        N1 = cfg_get_int(cfg, "Nr");
+        N2 = cfg_get_int(cfg, "Nmu");
+        N3 = cfg_get_int(cfg, "Nphi");
+        Min1 = cfg_get_double(cfg, "RMin");
+        Max1 = cfg_get_double(cfg, "RMax");
+        Min2 = cfg_get_double(cfg, "MuMin");
+        Max2 = cfg_get_double(cfg, "MuMax");
+        Min3 = cfg_get_double(cfg, "PhiMin");
+        Max3 = cfg_get_double(cfg, "PhiMax");
 
         fprintf(fcells, "# struct Cell {\n");
         fprintf(fcells, "#     int a;\n");
@@ -286,66 +250,32 @@ int main(int argc, char* argv[]) {
         fprintf(fcells, "#     double Nbar;\n");
         fprintf(fcells, "# };\n");
 
-        Config opts = cfg_new();
         cfg_set(opts, "coordsys", "spherical");
-        cfg_set_int(opts, "Ncells", Ncells);
-        cfg_set_int(opts, "Nr", Nr);
-        cfg_set_int(opts, "Nmu", Nmu);
-        cfg_set_int(opts, "Nphi", Nphi);
-        cfg_set_double(opts, "RMin", RMin);
-        cfg_set_double(opts, "RMax", RMax);
-        cfg_set_double(opts, "MuMin", MuMin);
-        cfg_set_double(opts, "MuMax", MuMax);
-        cfg_set_double(opts, "PhiMin", PhiMin);
-        cfg_set_double(opts, "PhiMax", PhiMax);
-        abn_write(fcells, &cells[0], Ncells, "2i8d", opts);
-        cfg_destroy(opts);
+        cfg_set_int(opts, "Nr", N1);
+        cfg_set_int(opts, "Nmu", N2);
+        cfg_set_int(opts, "Nphi", N3);
+        cfg_set_double(opts, "RMin", Min1);
+        cfg_set_double(opts, "RMax", Max1);
+        cfg_set_double(opts, "MuMin", Min2);
+        cfg_set_double(opts, "MuMax", Max2);
+        cfg_set_double(opts, "PhiMin", Min3);
+        cfg_set_double(opts, "PhiMax", Max3);
     }
-    else if(coordsys == "cartesian") {
+    else if(coordsys == CoordSysCartesian) {
         if(!cfg_has_keys(cfg, "Nx,Ny,Nz,XMin,XMax,YMin,YMax,ZMin,ZMax", ",")) {
-            fprintf(stderr, "basis: must provide config options N{x,y,z} and {X,Y,Phi}{Z,Max}\n");
-//            return 1;
+            opsec_error("basis: must provide config options N{x,y,z} and {X,Y,Phi}{Z,Max}\n");
             opsec_exit(1);
         }
 
-        int Nx = cfg_get_int(cfg, "Nx");
-        int Ny = cfg_get_int(cfg, "Ny");
-        int Nz = cfg_get_int(cfg, "Nz");
-        double XMin = cfg_get_double(cfg, "XMin");
-        double XMax = cfg_get_double(cfg, "XMax");
-        double YMin = cfg_get_double(cfg, "YMin");
-        double YMax = cfg_get_double(cfg, "YMax");
-        double ZMin = cfg_get_double(cfg, "ZMin");
-        double ZMax = cfg_get_double(cfg, "ZMax");
-
-        /* Populate list of cells */
-        Cell c;
-        int d, e, f;
-        #pragma omp parallel for private(c,d,e,f)
-        for(d = 0; d < Nx; d++) {
-            c.xmin = XMin +     d*(XMax - XMin)/Nx;   // this choice of linear radial spacing is consistent with the assumptions in dot.cpp
-            c.xmax = XMin + (d+1)*(XMax - XMin)/Nx;
-            for(e = 0; e < Ny; e++) {
-                c.ymin = YMin +     e*(YMax - YMin)/Ny;
-                c.ymax = YMin + (e+1)*(YMax - YMin)/Ny;
-                for(f = 0; f < Nz; f++) {
-                    c.zmin = ZMin +     f*(ZMax - ZMin)/Nz;
-                    c.zmax = ZMin + (f+1)*(ZMax - ZMin)/Nz;
-                    c.G = (d*Ny + e)*Nz + f;
-
-                    if(FinalizeCellC(c, nbar)) {
-                        #pragma omp critical (cells_update)
-                        {
-                            c.a = Ncells++;
-                            cells.push_back(c);
-                        }
-                    }
-                }
-            }
-        }
-
-        printf("Got %d non-empty cells out of %d possible.\n", Ncells, Nx*Ny*Nz);
-        printf("Writing list of cells to '%s'.\n", cellfile);
+        N1 = cfg_get_int(cfg, "Nx");
+        N2 = cfg_get_int(cfg, "Ny");
+        N3 = cfg_get_int(cfg, "Nz");
+        Min1 = cfg_get_double(cfg, "XMin");
+        Max1 = cfg_get_double(cfg, "XMax");
+        Min2 = cfg_get_double(cfg, "YMin");
+        Max2 = cfg_get_double(cfg, "YMax");
+        Min3 = cfg_get_double(cfg, "ZMin");
+        Max3 = cfg_get_double(cfg, "ZMax");
 
         fprintf(fcells, "# struct Cell {\n");
         fprintf(fcells, "#     int a;\n");
@@ -357,21 +287,51 @@ int main(int argc, char* argv[]) {
         fprintf(fcells, "#     double Nbar;\n");
         fprintf(fcells, "# };\n");
 
-        Config opts = cfg_new();
+
         cfg_set(opts, "coordsys", "cartesian");
-        cfg_set_int(opts, "Ncells", Ncells);
-        cfg_set_int(opts, "Nx", Nx);
-        cfg_set_int(opts, "Ny", Ny);
-        cfg_set_int(opts, "Nz", Nz);
-        cfg_set_double(opts, "XMin", XMin);
-        cfg_set_double(opts, "XMax", XMax);
-        cfg_set_double(opts, "YMin", YMin);
-        cfg_set_double(opts, "YMax", YMax);
-        cfg_set_double(opts, "ZMin", ZMin);
-        cfg_set_double(opts, "ZMax", ZMax);
-        abn_write(fcells, &cells[0], Ncells, "2i8d", opts);
-        cfg_destroy(opts);
+        cfg_set_int(opts, "Nx", N1);
+        cfg_set_int(opts, "Ny", N2);
+        cfg_set_int(opts, "Nz", N3);
+        cfg_set_double(opts, "XMin", Min1);
+        cfg_set_double(opts, "XMax", Max1);
+        cfg_set_double(opts, "YMin", Min2);
+        cfg_set_double(opts, "YMax", Max2);
+        cfg_set_double(opts, "ZMin", Min3);
+        cfg_set_double(opts, "ZMax", Max3);
     }
-    
+
+    /* Populate list of cells */
+    Cell c;
+    #pragma omp parallel for private(c)
+    for(int d = 0; d < N1; d++) {
+        c.min1 = Min1 +     d*(Max1 - Min1)/N1;
+        c.max1 = Min1 + (d+1)*(Max1 - Min1)/N1;
+        for(int e = 0; e < N2; e++) {
+            c.min2 = Min2 +     e*(Max2 - Min2)/N2;
+            c.max2 = Min2 + (e+1)*(Max2 - Min2)/N2;
+            for(int f = 0; f < N3; f++) {
+                c.min3 = Min3 +     f*(Max3 - Min3)/N3;
+                c.max3 = Min3 + (f+1)*(Max3 - Min3)/N3;
+                c.G = N3*(N2*d + e) + f;
+
+                if(FinalizeCell(coordsys, c, nbar)) {
+                    #pragma omp critical (cells_update)
+                    {
+                        c.a = Ncells++;
+                        cells.push_back(c);
+                    }
+                }
+            }
+        }
+    }
+
+    opsec_info("Got %d non-empty cells out of %d possible.\n", Ncells, N1*N2*N3);
+    cfg_set_int(opts, "Ncells", Ncells);
+
+    opsec_info("Writing cells to '%s'.\n", cellfile);
+    abn_write(fcells, &cells[0], Ncells, "2i8d", opts);
+
+    fclose(fcells);
+    cfg_destroy(opts);
     return 0;
 }

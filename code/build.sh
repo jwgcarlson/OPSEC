@@ -3,6 +3,8 @@
 # Build script for OPSEC.
 
 
+die() { echo "Build failed." && exit 1; }
+
 # Ensure opsecrc.sh has been loaded
 if [ -z "$OPSEC_ROOT" ]; then
     echo "You must first load the OPSEC environment by sourcing opsecrc.sh."
@@ -10,13 +12,7 @@ if [ -z "$OPSEC_ROOT" ]; then
 fi
 
 # Determine absolute path to top-level source directory (the location of this script)
-cd `dirname $0`
-export TOP=$PWD
-
-die() {
-    echo "Build failed."
-    exit 1
-}
+CODE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
     echo "Usage: $0 all"
@@ -36,8 +32,8 @@ usage() {
 }
 
 # Load custom compilation flags
-if [ -e "$TOP/setup.sh" ]; then
-    source "$TOP/setup.sh"
+if [ -e "$CODE/setup.sh" ]; then
+    source "$CODE/setup.sh"
 fi
 
 # Default installation prefix
@@ -58,25 +54,25 @@ build() {
     while [ -n "$1" ]; do
         case $1 in
             cfitsio)
-                cd $TOP
-                $TOP/scripts/build_cfitsio.sh || die
+                cd $CODE
+                $CODE/scripts/build_cfitsio.sh || die
                 ;;
             arpack)
-                cd $TOP/arpack
+                cd $CODE/arpack
                 echo "Building all in $PWD"
                 ./configure --prefix=$PREFIX && make && make install || die
                 ;;
             trilinos)
-                cd $TOP
-                $TOP/scripts/build_trilinos.sh || die
+                cd $CODE
+                $CODE/scripts/build_trilinos.sh || die
                 ;;
             gmock)
-                cd $TOP/gmock
+                cd $CODE/gmock
                 echo "Building all in $PWD"
                 ./configure --prefix=$PREFIX && make && make install || die
                 ;;
             opsec)
-                cd $TOP/opsec
+                cd $CODE/opsec
                 echo "Building all in $PWD"
                 ./configure --prefix=$PREFIX && make && make install || die
                 ;;

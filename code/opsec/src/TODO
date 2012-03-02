@@ -2,7 +2,6 @@
   up into multiple smaller files
 - write more unit tests (especially for models)
 - update usage strings in all programs
-- look for possible issues with Spline/XiFunc/SelectionFunc and threads
 - figure out runtime scaling for each program, and write a utility to predict
   the runtime of a particular configuration
 - allow specifying a configuration prefix on the command line, so that all
@@ -11,3 +10,9 @@
 - (LATER) make code more C++ (exception handling, classes for vectors/matrices)
 - formalize Impl pattern in helper class, ImplWrapper, and make all XXXImpl
   structs inherit from BaseImpl base class
+- clean up logging interface; add ability to log to file (emulating tee), to
+  have separate logs per process, etc.
+- figure out how to forward declare FILE in SplitFile.h
+- augment SplitFile to allow for specifying a maximum file size, honored by
+  calls to SplitFile::write()
+- DistributedMatrix class using ScaLAPACK

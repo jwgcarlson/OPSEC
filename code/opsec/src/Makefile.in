@@ -56,13 +56,13 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libklpk_la_LIBADD =
 am_libklpk_la_OBJECTS = abn.lo cfg.lo chealpix.lo eig.lo opsec.lo \
-	rng.lo libklpk_la-sig.lo libklpk_la-Cell.lo \
+	rng.lo libklpk_la-sig.lo libklpk_la-slp.lo libklpk_la-Cell.lo \
 	libklpk_la-QSpline.lo libklpk_la-Spline.lo \
-	libklpk_la-Survey.lo libklpk_la-BoxSurvey.lo \
-	libklpk_la-SphericalSurvey.lo libklpk_la-SelectionFunc.lo \
-	libklpk_la-SeparationFunc.lo libklpk_la-XiFunc.lo \
-	libklpk_la-Model.lo libklpk_la-RealModel.lo \
-	libklpk_la-TestModel.lo
+	libklpk_la-SplitFile.lo libklpk_la-Survey.lo \
+	libklpk_la-BoxSurvey.lo libklpk_la-SphericalSurvey.lo \
+	libklpk_la-SelectionFunc.lo libklpk_la-SeparationFunc.lo \
+	libklpk_la-XiFunc.lo libklpk_la-Model.lo \
+	libklpk_la-RealModel.lo libklpk_la-TestModel.lo
 libklpk_la_OBJECTS = $(am_libklpk_la_OBJECTS)
 libklpk_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(libklpk_la_CXXFLAGS) \
@@ -321,10 +321,10 @@ noinst_LTLIBRARIES = libklpk.la
 libklpk_la_SOURCES = \
     MyMatrix.hpp MyMultiVec.h MySignalMatrixOperator.h \
     vec3.h Matrix.h \
-    abn.c cfg.c chealpix.c eig.c opsec.c rng.c sig.cpp Cell.cpp QSpline.cpp \
-    abn.h cfg.h chealpix.h eig.h opsec.h rng.h sig.h   Cell.h   QSpline.h \
-    Spline.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
-    Spline.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
+    abn.c cfg.c chealpix.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
+    abn.h cfg.h chealpix.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
+    Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
+    Spline.h   SplitFile.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
     SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
     SelectionFunc.h   SeparationFunc.h   XiFunc.h   \
     Model.cpp RealModel.cpp TestModel.cpp \
@@ -497,10 +497,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SeparationFunc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SphericalSurvey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Spline.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SplitFile.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Survey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-TestModel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-XiFunc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-sig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-slp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opsec.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rng.Plo@am__quote@
 
@@ -553,6 +555,13 @@ libklpk_la-sig.lo: sig.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-sig.lo `test -f 'sig.cpp' || echo '$(srcdir)/'`sig.cpp
 
+libklpk_la-slp.lo: slp.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-slp.lo -MD -MP -MF $(DEPDIR)/libklpk_la-slp.Tpo -c -o libklpk_la-slp.lo `test -f 'slp.cpp' || echo '$(srcdir)/'`slp.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-slp.Tpo $(DEPDIR)/libklpk_la-slp.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='slp.cpp' object='libklpk_la-slp.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-slp.lo `test -f 'slp.cpp' || echo '$(srcdir)/'`slp.cpp
+
 libklpk_la-Cell.lo: Cell.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-Cell.lo -MD -MP -MF $(DEPDIR)/libklpk_la-Cell.Tpo -c -o libklpk_la-Cell.lo `test -f 'Cell.cpp' || echo '$(srcdir)/'`Cell.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-Cell.Tpo $(DEPDIR)/libklpk_la-Cell.Plo
@@ -573,6 +582,13 @@ libklpk_la-Spline.lo: Spline.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='Spline.cpp' object='libklpk_la-Spline.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-Spline.lo `test -f 'Spline.cpp' || echo '$(srcdir)/'`Spline.cpp
+
+libklpk_la-SplitFile.lo: SplitFile.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-SplitFile.lo -MD -MP -MF $(DEPDIR)/libklpk_la-SplitFile.Tpo -c -o libklpk_la-SplitFile.lo `test -f 'SplitFile.cpp' || echo '$(srcdir)/'`SplitFile.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-SplitFile.Tpo $(DEPDIR)/libklpk_la-SplitFile.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='SplitFile.cpp' object='libklpk_la-SplitFile.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-SplitFile.lo `test -f 'SplitFile.cpp' || echo '$(srcdir)/'`SplitFile.cpp
 
 libklpk_la-Survey.lo: Survey.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-Survey.lo -MD -MP -MF $(DEPDIR)/libklpk_la-Survey.Tpo -c -o libklpk_la-Survey.lo `test -f 'Survey.cpp' || echo '$(srcdir)/'`Survey.cpp

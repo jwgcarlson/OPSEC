@@ -59,10 +59,12 @@
 #include "Model.h"
 #include "MyMultiVec.h"
 #include "MySignalMatrixOperator.h"
+#include "SplitFile.h"
 #include "Survey.h"
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
+#include "slp.h"
 
 const char* usage =
     "Usage: klt [SWITCHES] [OPTIONS]\n"
@@ -80,8 +82,6 @@ const char* usage =
     "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n";
 
 int main(int argc, char* argv[]) {
-    printf("(TRACE) Initializing MPI...\n"); fflush(stdout);
-
     /* Initialize MPI, if available */
     int nprocs = 1, me = 0;
 #ifdef OPSEC_USE_MPI
@@ -90,33 +90,26 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
 #endif
 
-    printf("(TRACE) Reading configuration file...\n"); fflush(stdout);
-
+    /* Parse command line and configuration options */
     Config cfg = opsec_init(argc, argv, usage);
-
-    /* Debugging... */
-//    if(me == 0) {
-//        printf("# Config options\n");
-//        cfg_write(cfg, stdout);
-//        printf("\n");
-//    }
 
     /* Make sure all the necessary options are provided */
     if(!cfg_has_keys(cfg, "coordsys,cellfile,Nmodes,modefile,evalfile", ",")) {
-        if(me == 0) fprintf(stderr, "klt: missing configuration options\n");
+        if(me == 0) opsec_error("klt: missing configuration options\n");
         if(me == 0) fputs(usage, stderr);
         opsec_exit(1);
     }
 
-    std::string coordsys(cfg_get(cfg, "coordsys"));
-    if(coordsys != "spherical" && coordsys != "cartesian") {
-        fprintf(stderr, "klt: missing or invalid config option: coordsys = %s\n", coordsys.c_str());
+    int coordsys = cfg_get_enum(cfg, "coordsys", "cartesian", CoordSysCartesian,
+                                                 "spherical", CoordSysSpherical,
+                                                 "", -1);
+    if(coordsys == -1) {
+        opsec_error("klt: missing or invalid config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
         opsec_exit(1);
     }
 
-    int icoordsys;
     int N1, N2, N3;
-    if(coordsys == "cartesian") {
+    if(coordsys == CoordSysCartesian) {
         if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
             fprintf(stderr, "klt: must provide config options N{x,y,z}\n");
             opsec_exit(1);
@@ -124,9 +117,8 @@ int main(int argc, char* argv[]) {
         N1 = cfg_get_int(cfg, "Nx");
         N2 = cfg_get_int(cfg, "Ny");
         N3 = cfg_get_int(cfg, "Nz");
-        icoordsys = CoordSysCartesian;
     }
-    else if(coordsys == "spherical") {
+    else if(coordsys == CoordSysSpherical) {
         if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi", ",")) {
             fprintf(stderr, "klt: must provide config options N{r,mu,phi}\n");
             opsec_exit(1);
@@ -134,19 +126,12 @@ int main(int argc, char* argv[]) {
         N1 = cfg_get_int(cfg, "Nr");
         N2 = cfg_get_int(cfg, "Nmu");
         N3 = cfg_get_int(cfg, "Nphi");
-        icoordsys = CoordSysSpherical;
-    }
-    else {
-        fprintf(stderr, "klt: invalid option, coordsys = %s\n", coordsys.c_str());
-        opsec_exit(1);
     }
 
     const char* cellfile = cfg_get(cfg, "cellfile");
     int Nmodes = cfg_get_int(cfg, "Nmodes");
     const char* modefile = cfg_get(cfg, "modefile");
     const char* evalfile = cfg_get(cfg, "evalfile");
-
-    printf("(TRACE) Loading model...\n"); fflush(stdout);
 
     /* Load model */
     Model* model = InitializeModel(cfg);
@@ -160,22 +145,20 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
 
     /* Open output files on root process */
-    FILE* fmode = NULL;
-    FILE* feval = NULL;
+    SplitFile fmode;
+    SplitFile feval;
     if(me == 0) {
-        fmode = fopen(modefile, "w");
-        if(fmode == NULL) {
-            fprintf(stderr, "klt: could not open '%s' for writing\n", modefile);
-            opsec_exit(1);
+        fmode.open(modefile, "w");
+        if(!fmode.isopen()) {
+            opsec_error("klt: could not open '%s' for writing\n", modefile);
+            opsec_abort(1);
         }
-        feval = fopen(evalfile, "w");
-        if(feval == NULL) {
-            fprintf(stderr, "klt: could not open '%s' for writing\n", evalfile);
-            opsec_exit(1);
+        feval.open(evalfile, "w");
+        if(!feval.isopen()) {
+            opsec_error("klt: could not open '%s' for writing\n", evalfile);
+            opsec_abort(1);
         }
     }
-
-    printf("(TRACE) Reading cells...\n"); fflush(stdout);
 
     /* Read cells from file */
     int Ncells;
@@ -184,21 +167,21 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
 
     if(Nmodes > Ncells) {
-        fprintf(stderr, "klt: requesting %d modes from a %d dimensional space\n", Nmodes, Ncells);
+        if(me == 0) opsec_error("klt: requesting %d modes from a %d dimensional space\n", Nmodes, Ncells);
         opsec_exit(1);
     }
 
     /* Number of eigenvalues to compute */
     int nev = Nmodes;
 
-    /* Block size to use */
-    int block_size = 2;
+    /* Block size to use for block Krylov-Schur method */
+    int block_size = 1;
 
     /* Number of blocks to use */
     int num_blocks = std::min(2*nev/block_size, Ncells);
 
     /* Convergence tolerance */
-    double tol = 1e-4;
+    double tol = 1e-5;
 
     /* Maximum number of restarts */
     int max_restarts = 1000;
@@ -225,7 +208,8 @@ int main(int argc, char* argv[]) {
     typedef Anasazi::MultiVecTraits<ST,MV> MVT;
     typedef Anasazi::OperatorTraits<ST,MV,OP> OPT;
 
-    printf("(TRACE) Initializing eigenproblem...\n"); fflush(stdout);
+    if(me == 0)
+        opsec_info("Initializing eigenproblem...\n");
 
     /* Construct initial vector */
     Teuchos::RCP<MyMultiVec<real> > ivec = Teuchos::rcp(new MyMultiVec<real>(Ncells, block_size));
@@ -233,7 +217,7 @@ int main(int argc, char* argv[]) {
 
     /* Construct operator */
     Teuchos::RCP<MySignalMatrixOperator<real> > op
-        = Teuchos::rcp(new MySignalMatrixOperator<real>(icoordsys, N1, N2, N3, Ncells, cells, xi, survey));
+        = Teuchos::rcp(new MySignalMatrixOperator<real>(coordsys, N1, N2, N3, Ncells, cells, xi, survey));
 
     /* Create the eigenproblem */
     Teuchos::RCP<Anasazi::BasicEigenproblem<ST, MV, OP> > problem =
@@ -242,24 +226,27 @@ int main(int argc, char* argv[]) {
     problem->setNEV(nev);
     bool problem_okay = problem->setProblem();
     if(!problem_okay && me == 0) {
-        fprintf(stderr, "klt: error setting eigenproblem\n");
-        opsec_exit(1);
+        opsec_error("klt: error setting eigenproblem\n");
+        opsec_abort(1);
     }
 
-    printf("(TRACE) Initializing eigensolver...\n"); fflush(stdout);
+    if(me == 0)
+        opsec_info("Initializing eigensolver...\n");
 
     /* Initialize the block-Arnoldi solver */
     Anasazi::BlockKrylovSchurSolMgr<ST,MV,OP> solmgr(problem, params);
 
-    printf("(TRACE) Solving eigenproblem...\n"); fflush(stdout);
+    if(me == 0)
+        opsec_info("Solving eigenproblem...\n");
 
     /* Solve the problem to the specified tolerances or length */
     Anasazi::ReturnType retcode = solmgr.solve();
     if(retcode != Anasazi::Converged && me == 0) {
-        fprintf(stderr, "klt: SolverManager failed to converge\n");
+        opsec_error("klt: SolverManager failed to converge\n");
     }
 
-    printf("(TRACE) Reading solution...\n"); fflush(stdout);
+    if(me == 0)
+        opsec_info("Reading solution...\n");
 
     /* Get the eigenvalues and eigenvectors from the eigenproblem */
     Anasazi::Eigensolution<ST,MV> sol = problem->getSolution();
@@ -270,15 +257,14 @@ int main(int argc, char* argv[]) {
     int nconv = sol.numVecs;
 
     if(nconv < nev) {
-        fprintf(stderr, "klt: not all eigenvalues converged: nev = %d, nconv = %d\n", nev, nconv);
+        if(me == 0)
+            opsec_error("klt: not all eigenvalues converged: nev = %d, nconv = %d\n", nev, nconv);
         nev = nconv;
     }
 
-    printf("(TRACE) Writing eigenmodes to file...\n"); fflush(stdout);
-
     /* Prepare headers in output files */
     if(me == 0) {
-        printf("Writing eigenmodes and eigenvalues to file...\n");
+        opsec_info("Writing eigenmodes and eigenvalues to file...\n");
 
         Config opts = cfg_new();
         cfg_set(opts, "cellfile", cellfile);
@@ -322,18 +308,19 @@ int main(int argc, char* argv[]) {
         memcpy(&v[0], vloc, Ncells*sizeof(real));
 #endif
         if(me == 0) {
-            fwrite(&evals[j], sizeof(real), 1, feval);
-            fwrite(&v[0], sizeof(real), Ncells, fmode);
+            feval.write((char*) &evals[j], sizeof(real));
+            fmode.write((char*) &v[0], Ncells*sizeof(real));
         }
     }
 
     /* Clean up nicely */
     if(me == 0) {
-        fclose(feval);
-        fclose(fmode);
+        feval.close();
+        fmode.close();
     }
     free(cells);
     delete model;
+    delete survey;
     cfg_destroy(cfg);
 #ifdef OPSEC_USE_MPI
     MPI_Finalize();

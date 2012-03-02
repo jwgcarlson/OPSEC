@@ -26,9 +26,11 @@ AC_F77_FUNC(blacs_pinfo)
 acx_blacs_save_LIBS="$LIBS"
 LIBS="$LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS"
 
+AC_MSG_NOTICE([blacs.m4: BLACS_LIBS = $BLACS_LIBS])
 # First, check BLACS_LIBS environment variable
 if test $acx_blacs_ok = no; then
     if test "x$BLACS_LIBS" != x; then
+        AC_MSG_NOTICE([blacs.m4: yep, BLACS_LIBS = $BLACS_LIBS])
         save_LIBS="$LIBS"; LIBS="$BLACS_LIBS $LIBS"
         AC_MSG_CHECKING([for $blacs_pinfo in $BLACS_LIBS])
         AC_TRY_LINK_FUNC($blacs_pinfo, [acx_blacs_ok=yes], [BLACS_LIBS=""])

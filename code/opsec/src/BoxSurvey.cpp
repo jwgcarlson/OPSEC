@@ -25,10 +25,7 @@ struct BoxSeparationFuncImpl : public SeparationFuncImpl {
     /* Separation between two points x1 and x2 on the periodic interval [0,L] */
     double linsep(double x1, double x2) {
         double dx = x2 - x1;
-        if(dx > L/2)
-            dx -= L;
-        else if(dx < -L/2)
-            dx += L;
+        dx += L * ((dx < -L/2) - (dx >= L/2));  // translate by L into the interval [-L/2,L/2)
         return dx;
     }
 
@@ -76,6 +73,12 @@ struct ConstantSelectionFuncImpl : public SelectionFuncImpl {
     }
 };
 
+
+BoxSurvey::BoxSurvey(const char* galfile_, double nbar_, double L_) {
+    galfile = galfile_;
+    nbar = nbar_;
+    L = L_;
+}
 
 BoxSurvey::BoxSurvey(Config cfg) {
     galfile = cfg_get(cfg, "galfile");

@@ -17,7 +17,9 @@
 #endif
 
 #include "cscalapack.h"
+#include "slp.h"
 
+#if 0
 /* BLACS context */
 struct Context {
     int ictxt;      // BLACS context ID
@@ -112,6 +114,7 @@ static inline void mypdgemr2d(int m, int n,
               b, ib + 1, jb + 1, (int*) &descb, 
               gcontext.ictxt);
 }
+#endif
 
 int main(int argc, char* argv[]) {
     /* Initialize MPI */

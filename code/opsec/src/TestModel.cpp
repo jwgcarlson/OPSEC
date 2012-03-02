@@ -25,40 +25,23 @@ DEFINE_TEST_XI(GaussianXi, A*exp(-b*r*r))
 DEFINE_TEST_XI(DGaussianXi, A*r*exp(-b*r*r))
 
 
+TestModel::TestModel(int form_, double A_, double b_) {
+    form = form_;
+    A = A_;
+    b = b_;
+}
+
 TestModel::TestModel(Config cfg) {
-    if(cfg_has_key(cfg, "form")) {
-        const char* s = cfg_get(cfg, "form");
-        if(strcmp(s, "exponential") == 0)
-            form = 0;
-        else if(strcmp(s, "gaussian") == 0)
-            form = 1;
-        else {
-            fprintf(stderr, "TestModel: unrecognized functional form: '%s'\n", s);
-            fprintf(stderr, "           (defaulting to 'exponential')\n");
-            form = 0;
-        }
+    form = cfg_get_enum(cfg, "form", "exponential", 0,
+                                     "gaussian", 1,
+                                     "", -1);
+    if(form == -1) {
+        fprintf(stderr, "TestModel: unrecognized functional form: '%s'\n", cfg_get(cfg, "form"));
+        fprintf(stderr, "           (defaulting to 'exponential')\n");
+        form = 0;
     }
     A = cfg_has_key(cfg, "A") ? cfg_get_double(cfg, "A") : 1.0;
     b = cfg_has_key(cfg, "b") ? cfg_get_double(cfg, "b") : 0.01;
-
-#if 0
-    const char* s = cfg_has_key(cfg, "form") ?  cfg_get(cfg, "form") : "exponential";
-    if(strcmp(s, "exponential") == 0) {
-        double A = cfg_has_key(cfg, "A") ? cfg_get_double(cfg, "A") : 1.0;
-        double b = cfg_has_key(cfg, "b") ? cfg_get_double(cfg, "b") : 0.01;
-        xi = XiFunc(new ExponentialXi(A, b));
-    }
-    else if(strcmp(s, "gaussian") == 0) {
-        double A = cfg_has_key(cfg, "A") ? cfg_get_double(cfg, "A") : 1.0;
-        double b = cfg_has_key(cfg, "b") ? cfg_get_double(cfg, "b") : 0.01;
-        xi = XiFunc(new GaussianXi(A, b));
-    }
-    else {
-        fprintf(stderr, "TestModel: Unrecognized functional form: '%s'\n", s);
-        fprintf(stderr, "           Defaulting to 'exponential'.\n");
-        xi = XiFunc(new ExponentialXi(1.0, 0.01));
-    }
-#endif
 }
 
 TestModel::~TestModel() {

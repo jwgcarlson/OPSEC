@@ -97,6 +97,11 @@ int cfg_get_array_int   (Config cfg, const char* key, int nmax, int* values);
 int cfg_get_array_float (Config cfg, const char* key, int nmax, float* values);
 int cfg_get_array_double(Config cfg, const char* key, int nmax, double* values);
 
+/* Map a finite set of options into integers.
+ * Usage example:
+ *   cfg_get_enum(cfg, "myenum", "TRUE", 0, "FALSE", 1, "", -100); */
+int cfg_get_enum(Config cfg, const char* key, ...);
+
 #if 0
 /* Get the specified configuration option, returning an error code if the
  * configuration key is not present or if the associated value cannot be

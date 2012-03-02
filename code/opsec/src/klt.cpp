@@ -78,36 +78,28 @@ const char* usage =
     "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n";
 
 int main(int argc, char* argv[]) {
-    printf("(TRACE) Initializing MPI...\n"); fflush(stdout);
-
     /* Initialize MPI, if available */
     int nprocs = 1, me = 0;
 #ifdef OPSEC_USE_MPI
     MPI_Init(&argc, &argv);
-    MPI_Comm comm = MPI_COMM_WORLD;
-    MPI_Comm_size(comm, &nprocs);
-    MPI_Comm_rank(comm, &me);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
 #endif
 
     Config cfg = opsec_init(argc, argv, usage);
 
-    /* Debugging... */
-//    if(me == 0) {
-//        printf("# Config options\n");
-//        cfg_write(cfg, stdout);
-//        printf("\n");
-//    }
-
     /* Make sure all the necessary options are provided */
     if(!cfg_has_keys(cfg, "coordsys,cellfile,Nmodes,modefile,evalfile", ",")) {
-        if(me == 0) fprintf(stderr, "klt: missing configuration options\n");
-        if(me == 0) fputs(usage, stderr);
+        opsec_error("klt: missing configuration options\n");
+        if(me == 0) { fputs(usage, stderr); fflush(stderr); }
         opsec_exit(1);
     }
 
-    string coordsys(cfg_get(cfg, "coordsys"));
-    if(coordsys != "spherical" && coordsys != "cartesian") {
-        fprintf(stderr, "klt: missing or invalid config option: coordsys = %s\n", coordsys.c_str());
+    int coordsys = cfg_get_enum(cfg, "coordsys", "cartesian", CoordSysCartesian,
+                                                 "spherical", CoordSysSpherical,
+                                                 "", -1);
+    if(coordsys == -1) {
+        opsec_error("klt: missing or invalid config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
         opsec_exit(1);
     }
 
@@ -115,8 +107,6 @@ int main(int argc, char* argv[]) {
     int Nmodes = cfg_get_int(cfg, "Nmodes");
     const char* modefile = cfg_get(cfg, "modefile");
     const char* evalfile = cfg_get(cfg, "evalfile");
-
-    printf("(TRACE) Loading model...\n"); fflush(stdout);
 
     /* Load model */
     Model* model = InitializeModel(cfg);
@@ -129,33 +119,27 @@ int main(int argc, char* argv[]) {
     if(!survey)
         opsec_exit(1);
 
-    printf("(TRACE) Opening output files...\n"); fflush(stdout);
-
     /* Open output files on root process */
     FILE* fmode = NULL;
     FILE* feval = NULL;
     if(me == 0) {
         fmode = fopen(modefile, "w");
         if(fmode == NULL) {
-            fprintf(stderr, "klt: could not open '%s' for writing\n", modefile);
+            opsec_error("klt: could not open '%s' for writing\n", modefile);
             opsec_exit(1);
         }
         feval = fopen(evalfile, "w");
         if(feval == NULL) {
-            fprintf(stderr, "klt: could not open '%s' for writing\n", evalfile);
+            opsec_error("klt: could not open '%s' for writing\n", evalfile);
             opsec_exit(1);
         }
     }
-
-    printf("(TRACE) Reading cells from %s...\n", cellfile); fflush(stdout);
 
     /* Read cells from file */
     int Ncells;
     Cell* cells = ReadCells(cellfile, &Ncells);
     if(cells == NULL)
         opsec_exit(1);
-
-    printf("(TRACE) Determining local problem sizes...\n"); fflush(stdout);
 
     /* Determine the local problem lengths for each process */
     vector<int> locsizes(nprocs), locdisps(nprocs);
@@ -164,8 +148,6 @@ int main(int argc, char* argv[]) {
         locdisps[i] = (i == 0) ? 0 : locdisps[i-1] + locsizes[i-1];
     }
     assert(locdisps[nprocs-1] + locsizes[nprocs-1] == Ncells);
-
-    printf("(TRACE) Process %d is assigned %d basis cells...\n", me, locsizes[me]); fflush(stdout);
 
     /* Total number of cells */
     int n = Ncells;
@@ -179,15 +161,13 @@ int main(int argc, char* argv[]) {
     /* Memory for local nloc-by-n block of signal matrix */
     real* S = NULL;
 
-    if(me == 0)
-        printf("Computing signal matrix elements in cell basis...\n");
-    fflush(stdout);
+    opsec_info("Computing signal matrix elements in cell basis...\n");
 
-    MPI_Barrier(comm);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    if(coordsys == "spherical") {
+    if(coordsys == CoordSysSpherical) {
         if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi", ",")) {
-            fprintf(stderr, "klt: must provide config options N{r,mu,phi}\n");
+            opsec_error("klt: must provide config options N{r,mu,phi}\n");
             opsec_exit(1);
         }
         int Nr = cfg_get_int(cfg, "Nr");
@@ -195,9 +175,9 @@ int main(int argc, char* argv[]) {
         int Nphi = cfg_get_int(cfg, "Nphi");
         S = ComputeSignalMatrixS(n, nloc, amin, cells, Nr, Nmu, Nphi, xi, survey);
     }
-    else if(coordsys == "cartesian") {
+    else if(coordsys == CoordSysCartesian) {
         if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
-            fprintf(stderr, "klt: must provide config options N{x,y,z}\n");
+            opsec_error("klt: must provide config options N{x,y,z}\n");
             opsec_exit(1);
         }
         int Nx = cfg_get_int(cfg, "Nx");
@@ -216,11 +196,10 @@ int main(int argc, char* argv[]) {
     real* evals = (real*) opsec_malloc(nev*sizeof(real));
     real* modes = (real*) opsec_malloc(nloc*ncv*sizeof(real));
 
-    if(me == 0)
-        printf("Computing eigenmodes of signal matrix...\n");
+    opsec_info("Computing eigenmodes of signal matrix...\n");
 
 #ifdef OPSEC_USE_MPI
-    int nconv = peig(comm, n, nloc, nev, ncv, S, evals, modes);
+    int nconv = peig(MPI_COMM_WORLD, n, nloc, nev, ncv, S, evals, modes);
 #else
     int nconv = eig(n, nev, ncv, S, evals, modes);
 #endif
@@ -228,10 +207,11 @@ int main(int argc, char* argv[]) {
     /* Free signal matrix memory as soon as possible */
     free(S);
 
+    opsec_info("Writing eigenmodes and eigenvalues to file...\n");
+
     /* Prepare headers in output files */
     real* v = NULL;     // memory for a full eigenvector on root process
     if(me == 0) {
-        printf("Writing eigenmodes and eigenvalues to file...\n");
 
         v = (real*) opsec_malloc(n*sizeof(real));
 
@@ -259,7 +239,7 @@ int main(int argc, char* argv[]) {
          * _reverse_ order, i.e. smallest to largest.  We want to write the
          * spectrum to file with the largest eigenvalue first.) */
 #ifdef OPSEC_USE_MPI
-        MPI_Gatherv(modes + (nev-i)*nloc, nloc, REAL_MPI_TYPE, v, &locsizes[0], &locdisps[0], REAL_MPI_TYPE, 0, comm);
+        MPI_Gatherv(modes + (nev-i)*nloc, nloc, REAL_MPI_TYPE, v, &locsizes[0], &locdisps[0], REAL_MPI_TYPE, 0, MPI_COMM_WORLD);
 #else
         memcpy(v, modes + (nev-i)*n, n*sizeof(real));
 #endif
@@ -279,6 +259,7 @@ int main(int argc, char* argv[]) {
     free(modes);
     free(cells);
     delete model;
+    delete survey;
     cfg_destroy(cfg);
 #ifdef OPSEC_USE_MPI
     MPI_Finalize();

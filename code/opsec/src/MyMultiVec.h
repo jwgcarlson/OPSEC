@@ -60,21 +60,15 @@
 
 #include "MyMatrix.hpp"
 
-template<typename T>
-static inline int mysgn(T x) {
-    if(x < 0)      return -1;
-    else if(x > 0) return +1;
-    else           return 0;
-}
-
-/* Decide if two arrays overlap in memory.  Compare the sign of (&b[0]-&a[0])
- * and (&b[0]-&a[na]); if they differ, then memory region a straddles the start
- * of memory region b.  And vice versa to test if b straddles a. */
+/* Decide if two arrays overlap in memory. */
 template<typename T>
 static inline bool array_overlap(const T* a, int na, const T* b, int nb) {
-    int x1 = mysgn(b - a) * mysgn(b - a - na);
-    int x2 = mysgn(a - b) * mysgn(a - b - nb);
-    return (x1 == -1) || (x2 == -1);
+    if(a < b)
+        return b < a + na;              // overlap if b starts before end of a
+    else if(b < a)
+        return a < b + nb;              // overlap if a starts before end of b
+    else        // a == b
+        return (na > 0) && (nb > 0);    // overlap if both arrays are non-empty
 }
 
 /* Return the vector [ 0, 1, 2, ..., n-1 ]. */
@@ -86,7 +80,7 @@ static inline std::vector<int> irange(int n) {
 }
 
 
-/* MyMultiVec<ScalarType>
+/* MyMultiVec
  *
  * Distributed-memory multi-vector class, using MPI. */
 template<class ScalarType>

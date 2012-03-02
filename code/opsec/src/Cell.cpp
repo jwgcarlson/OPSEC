@@ -94,7 +94,7 @@ Cell* ReadCells(const char* cellfile, int *Ncells_) {
             fflush(stderr);
         }
 
-        printf("(TRACE) Read %d basis cells from '%s'\n", Ncells, cellfile); fflush(stdout);
+        printf("Read %d basis cells from '%s'\n", Ncells, cellfile); fflush(stdout);
 
         fclose(fp);
         cfg_destroy(cellopts);
@@ -103,8 +103,6 @@ Cell* ReadCells(const char* cellfile, int *Ncells_) {
 
 #ifdef OPSEC_USE_MPI
     if(usempi) {
-        printf("(TRACE) Sending cells to other processes...\n"); fflush(stdout);
-
         /* Define MPI datatype for cells (this must be updated if struct Cell changes!) */
         MPI_Datatype cell_datatype;
         int blocklengths[2] = { 2, 8 };

@@ -56,6 +56,17 @@ void ComputeSignalMatrixBlock(
         ComputeSignalMatrixBlockS(n, nrows, rows, ncols, cols, s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
 }
 
+void ComputeSignalMatrixBlock(
+        int n, const vector<int>& rows, const vector<int>& cols,
+        real* s, int lld,
+        const XiFunc& xi, Survey* survey,
+        int coordsys, const Cell* cells, int N1, int N2, int N3,
+        double epsrel, double epsabs)
+{
+    ComputeSignalMatrixBlock(n, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0],
+                             s, lld, xi, survey, coordsys, cells, N1, N2, N3, epsrel, epsabs);
+}
+
 void ComputeSignalMatrixBlockC(
         int n, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
@@ -359,8 +370,8 @@ static inline double norm(double dx, double dy, double dz) {
     return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
-double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel, double epsabs) {
-    const int lg2n_min = 6, lg2n_max = 30;
+double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel, double epsabs, int* neval) {
+    const int lg2n_min = 3, lg2n_max = 30;
 
     /* Swap coordinate boundaries (exploiting translational symmetry) to
      * ensure consistent numerical values for matrix elements. */
@@ -390,10 +401,11 @@ double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
 
     int n = 0;
     double fsum = 0.;
-    double Q, oldQ = 0., dQ;
+    double Q, oldQ = 0.;
     Point p1, p2;
     for(int lg2n = lg2n_min; lg2n <= lg2n_max; lg2n++) {
-        while(n < (1 << lg2n)) {
+        int ngoal = (1 << lg2n);
+        while(n < ngoal) {
             rng_sobol_get(&sobol, u);
             p1.x = (1 - u[0])*xmin1 + u[0]*xmax1;
             p1.y = (1 - u[1])*ymin1 + u[1]*ymax1;
@@ -409,13 +421,18 @@ double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
         /* Declare convergence if the integral changes by only a small amount
          * after doubling the number of evaluation points. */
         Q = fsum/n;
-        dQ = fabs(Q - oldQ);
+        double dQ = fabs(Q - oldQ);
         if(dQ < fmax(epsabs, fabs(Q)*epsrel))
             break;
 
         /* Otherwise continue with the next batch of evaluations. */
         oldQ = Q;
+
+        if(lg2n == lg2n_max)
+            fprintf(stderr, "ComputeSignalC: max evaluations reached\n");
     }
+    if(neval)
+        *neval = n;
     return Q;
 }
 

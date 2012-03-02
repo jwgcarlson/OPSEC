@@ -211,10 +211,10 @@ void abn_write_header(FILE *stream, size_t n, const char* fmt, Config opts) {
 
 size_t abn_write(FILE* stream, const void* ptr, size_t n, const char* fmt, Config opts) {
     int size = abn_calcsize(fmt);
-    size_t nwritten;
+    size_t nwrite;
     abn_write_header(stream, n, fmt, opts);
-    nwritten = fwrite(ptr, size, n, stream);
-    return nwritten;
+    nwrite = fwrite(ptr, size, n, stream);
+    return nwrite;
 }
 
 int abn_read_header(FILE *stream, size_t* n_, size_t* size_, char* endian_, char* fmt_, Config opts) {

@@ -13,6 +13,7 @@
 
 class BoxSurvey : public Survey {
 public:
+    BoxSurvey(const char* galfile, double nbar, double L);
     BoxSurvey(Config cfg);
     ~BoxSurvey();
 

@@ -21768,9 +21768,13 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 acx_blacs_save_LIBS="$LIBS"
 LIBS="$LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS"
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: blacs.m4: BLACS_LIBS = $BLACS_LIBS" >&5
+$as_echo "$as_me: blacs.m4: BLACS_LIBS = $BLACS_LIBS" >&6;}
 # First, check BLACS_LIBS environment variable
 if test $acx_blacs_ok = no; then
     if test "x$BLACS_LIBS" != x; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: blacs.m4: yep, BLACS_LIBS = $BLACS_LIBS" >&5
+$as_echo "$as_me: blacs.m4: yep, BLACS_LIBS = $BLACS_LIBS" >&6;}
         save_LIBS="$LIBS"; LIBS="$BLACS_LIBS $LIBS"
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $blacs_pinfo in $BLACS_LIBS" >&5
 $as_echo_n "checking for $blacs_pinfo in $BLACS_LIBS... " >&6; }

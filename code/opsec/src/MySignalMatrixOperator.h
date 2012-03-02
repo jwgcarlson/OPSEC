@@ -51,13 +51,17 @@ public:
             d[p] = p*(Ncells/nprocs) + std::min(p, Ncells % nprocs);
         }
 
-        printf("(TRACE) Computing signal matrix components...\n"); fflush(stdout);
+        opsec_info("Computing signal matrix components...\n");
 
-        /* FIXME: this is temporary, replace with typesafe version */
-        if(coordsys == CoordSysCartesian)
-            S = ComputeSignalMatrixC(Ncells, n[me], d[me], cells, Nx, Ny, Nz, xi, survey);
-        else if(coordsys == CoordSysSpherical)
-            S = ComputeSignalMatrixS(Ncells, n[me], d[me], cells, Nr, Nmu, Nphi, xi, survey);
+        std::vector<int> rows(n[me]), cols(Ncells);
+        for(int aloc = 0; aloc < n[me]; aloc++)
+            rows[aloc] = aloc + d[me];
+        for(int b = 0; b < Ncells; b++)
+            cols[b] = b;
+
+        S = (real*) opsec_malloc(n[me]*Ncells*sizeof(real));
+        ComputeSignalMatrixBlock(Ncells, rows, cols, S, n[me],
+                                 xi, survey, coordsys, cells, N1, N2, N3);
     }
 
     /* Destructor */
@@ -67,8 +71,6 @@ public:
 
     void Apply(const Anasazi::MultiVec<ScalarType>& x, Anasazi::MultiVec<ScalarType>& y) const
     {
-//        printf("(TRACE) Applying operator to %d multi-vector...\n", x.GetNumberVecs()); fflush(stdout);
-
         assert(x.GetVecLength() == Ncells && y.GetVecLength() == Ncells);
         assert(x.GetNumberVecs() == y.GetNumberVecs());
 
@@ -91,11 +93,11 @@ public:
                            MPI_COMM_WORLD);
 
             /* Apply local signal matrix to xfull */
-            blas.GEMV(Teuchos::TRANS,   // trans
-                      Ncells,           // M
-                      n[me],            // N
+            blas.GEMV(Teuchos::NO_TRANS,// trans
+                      n[me],            // m
+                      Ncells,           // n
                       1,                // alpha
-                      S,                // A
+                      S,                // a
                       Ncells,           // lda
                       &xfull[0],        // x
                       1,                // incx
@@ -110,9 +112,10 @@ private:
     int coordsys;
 
     /* Number of cell divisions in each coordinate direction */
-    union { double N1; double Nx; double Nr; };
-    union { double N2; double Ny; double Nmu; };
-    union { double N3; double Nz; double Nphi; };
+//    union { double N1; double Nx; double Nr; };
+//    union { double N2; double Ny; double Nmu; };
+//    union { double N3; double Nz; double Nphi; };
+    int N1, N2, N3;
 
     int Ncells;         // a.k.a. N, total matrix/vector size
     const Cell* cells;

@@ -5,6 +5,7 @@
 
 class TestModel : public Model {
 public:
+    TestModel(int form = 0, double A = 1., double b = 0.01);
     TestModel(Config cfg);
     ~TestModel();
 

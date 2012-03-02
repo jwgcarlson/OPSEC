@@ -2,6 +2,7 @@
 #define SIG_H
 
 #include <cstdio>
+#include <vector>
 
 #include "opsec.h"
 
@@ -12,11 +13,17 @@ class XiFunc;
 
 /* Compute a block of the n-by-n signal matrix. */
 void ComputeSignalMatrixBlock(
+        int n, const std::vector<int>& rows, const std::vector<int>& cols,
+        real* s, int lld,
+        const XiFunc& xi, Survey* survey,
+        int coordsys, const Cell* cells, int N1, int N2, int N3,
+        double epsrel = 1e-5, double epsabs = 1e-8);
+void ComputeSignalMatrixBlock(
         int n, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
         int coordsys, const Cell* cells, int N1, int N2, int N3,
-        double epsrel = 1e-5, double epsabs = 1e-10);
+        double epsrel = 1e-5, double epsabs = 1e-8);
 
 void ComputeSignalMatrixBlockC(
         int n, int nrows, const int* rows, int ncols, const int* cols,
@@ -24,7 +31,6 @@ void ComputeSignalMatrixBlockC(
         const XiFunc& xi, Survey* survey,
         const Cell* cells, int Nx, int Ny, int Nz,
         double epsrel = 1e-5, double epsabs = 1e-10);
-
 void ComputeSignalMatrixBlockS(
         int n, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
@@ -55,8 +61,8 @@ FILE* ReadModesHeader(const char* modefile, int* Nmodes = NULL, int* Ncells = NU
 real* ReadModes(const char* modefile, int* Nmodes = NULL, int* Ncells = NULL);
 
 /* Auxiliary routines, should not be public anymore.
- * Except yes they have to be for dot to be able to compute variances in counts. */
+ * ... Except yes they have to be for dot to be able to compute variances in counts. */
 double ComputeSignalS(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10);
-double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10);
+double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10, int* neval = NULL);
 
 #endif // SIG_H

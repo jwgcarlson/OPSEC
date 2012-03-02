@@ -114,3 +114,86 @@ void opsec_abort(int status) {
 
     abort();
 }
+
+int opsec_info(const char* format, ...) {
+    int nchars = 0;
+    va_list ap;
+    va_start(ap, format);
+    nchars = opsec_vfprintf(stdout, format, ap);
+    va_end(ap);
+    return nchars;
+}
+
+int opsec_debug(const char* format, ...) {
+    int nchars = 0;
+#ifdef OPSEC_DEBUG
+    va_list ap;
+    va_start(ap, format);
+    nchars = opsec_vfprintf(stdout, format, ap);
+    va_end(ap);
+#endif
+    return nchars;
+}
+
+int opsec_warn(const char* format, ...) {
+    int nchars = 0;
+#ifdef OPSEC_WARN
+    va_list ap;
+    va_start(ap, format);
+    nchars = opsec_vfprintf(stderr, format, ap);
+    va_end(ap);
+#endif
+    return nchars;
+}
+
+int opsec_error(const char* format, ...) {
+    int nchars = 0;
+    va_list ap;
+    va_start(ap, format);
+    nchars = opsec_vfprintf(stderr, format, ap);
+    va_end(ap);
+    return nchars;
+}
+
+int opsec_vfprintf(FILE* stream, const char *format, va_list ap) {
+    int nchars = 0;
+
+    /* This routine should work for both MPI and non-MPI programs, including
+     * those that are compiled with OPSEC_USE_MPI present, but which never call
+     * MPI_Init().  So we have to be a bit careful. */
+    int nprocs = 1, me = 0;
+
+#ifdef OPSEC_USE_MPI
+    /* Decide if MPI_Init() was ever called. */
+    int mpi;
+    MPI_Initialized(&mpi);
+
+    /* Decide if we're the root process. */
+    if(mpi) {
+        MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+        MPI_Comm_rank(MPI_COMM_WORLD, &me);
+    }
+#endif
+    if(nprocs > 1)
+        nchars = fprintf(stream, "[proc %d] ", me);
+    nchars += vfprintf(stream, format, ap);
+    fflush(stream);
+    return nchars;
+}
+
+void* opsec_debug_malloc(size_t size, const char* file, int line) {
+    void* ptr = malloc(size);
+    if(!ptr) {
+        opsec_error("debug_malloc: failed to allocate %zd bytes at line %d of %s\n", size, line, file);
+        opsec_abort(1);
+    }
+    return ptr;
+}
+void* opsec_debug_calloc(size_t nmemb, size_t size, const char* file, int line) {
+    void* ptr = calloc(nmemb, size);
+    if(!ptr) {
+        opsec_error("debug_calloc: failed to allocate %zd bytes at line %d of %s\n", nmemb*size, line, file);
+        opsec_abort(1);
+    }
+    return ptr;
+}
