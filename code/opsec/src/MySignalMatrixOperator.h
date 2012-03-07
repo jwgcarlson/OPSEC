@@ -28,6 +28,7 @@ public:
     MySignalMatrixOperator(int coordsys_, int N1_, int N2_, int N3_,
             int Ncells_, const Cell* cells_, XiFunc xi_, Survey* survey)
     {
+        assert(sizeof(ScalarType) == sizeof(real));
         coordsys = coordsys_;
         N1 = N1_;
         N2 = N2_;
@@ -112,9 +113,6 @@ private:
     int coordsys;
 
     /* Number of cell divisions in each coordinate direction */
-//    union { double N1; double Nx; double Nr; };
-//    union { double N2; double Ny; double Nmu; };
-//    union { double N3; double Nz; double Nphi; };
     int N1, N2, N3;
 
     int Ncells;         // a.k.a. N, total matrix/vector size

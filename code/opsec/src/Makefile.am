@@ -8,8 +8,8 @@ noinst_LTLIBRARIES = libklpk.la
 libklpk_la_SOURCES = \
     MyMatrix.hpp MyMultiVec.h MySignalMatrixOperator.h \
     vec3.h Matrix.h \
-    abn.c cfg.c chealpix.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
-    abn.h cfg.h chealpix.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
+    abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
+    abn.h cfg.h chealpix.h cubature.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
     Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
     Spline.h   SplitFile.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
     SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \

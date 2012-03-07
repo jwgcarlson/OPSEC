@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 
     /* Make sure all the necessary options are provided */
     if(!cfg_has_keys(cfg, "coordsys,cellfile,Nmodes,modefile,evalfile", ",")) {
-        opsec_error("klt: missing configuration options\n");
+        if(me == 0) opsec_error("klt: missing configuration options\n");
         if(me == 0) { fputs(usage, stderr); fflush(stderr); }
         opsec_exit(1);
     }
@@ -99,7 +99,8 @@ int main(int argc, char* argv[]) {
                                                  "spherical", CoordSysSpherical,
                                                  "", -1);
     if(coordsys == -1) {
-        opsec_error("klt: missing or invalid config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
+        if(me == 0)
+            opsec_error("klt: missing or invalid config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
         opsec_exit(1);
     }
 
@@ -107,6 +108,9 @@ int main(int argc, char* argv[]) {
     int Nmodes = cfg_get_int(cfg, "Nmodes");
     const char* modefile = cfg_get(cfg, "modefile");
     const char* evalfile = cfg_get(cfg, "evalfile");
+
+    double epsrel = cfg_has_key(cfg, "klt.epsrel") ? cfg_get_double(cfg, "klt.epsrel") : 1e-5;
+    double epsabs = cfg_has_key(cfg, "klt.epsabs") ? cfg_get_double(cfg, "klt.epsabs") : 1e-10;
 
     /* Load model */
     Model* model = InitializeModel(cfg);
@@ -161,7 +165,8 @@ int main(int argc, char* argv[]) {
     /* Memory for local nloc-by-n block of signal matrix */
     real* S = NULL;
 
-    opsec_info("Computing signal matrix elements in cell basis...\n");
+    if(me == 0)
+        opsec_info("Computing signal matrix elements in cell basis...\n");
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -173,7 +178,7 @@ int main(int argc, char* argv[]) {
         int Nr = cfg_get_int(cfg, "Nr");
         int Nmu = cfg_get_int(cfg, "Nmu");
         int Nphi = cfg_get_int(cfg, "Nphi");
-        S = ComputeSignalMatrixS(n, nloc, amin, cells, Nr, Nmu, Nphi, xi, survey);
+        S = ComputeSignalMatrixS(n, nloc, amin, cells, Nr, Nmu, Nphi, xi, survey, epsrel, epsabs);
     }
     else if(coordsys == CoordSysCartesian) {
         if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
@@ -183,7 +188,7 @@ int main(int argc, char* argv[]) {
         int Nx = cfg_get_int(cfg, "Nx");
         int Ny = cfg_get_int(cfg, "Ny");
         int Nz = cfg_get_int(cfg, "Nz");
-        S = ComputeSignalMatrixC(n, nloc, amin, cells, Nx, Ny, Nz, xi, survey);
+        S = ComputeSignalMatrixC(n, nloc, amin, cells, Nx, Ny, Nz, xi, survey, epsrel, epsabs);
     }
 
     /* Number of eigenvalues to compute */
@@ -196,7 +201,8 @@ int main(int argc, char* argv[]) {
     real* evals = (real*) opsec_malloc(nev*sizeof(real));
     real* modes = (real*) opsec_malloc(nloc*ncv*sizeof(real));
 
-    opsec_info("Computing eigenmodes of signal matrix...\n");
+    if(me == 0)
+        opsec_info("Computing eigenmodes of signal matrix...\n");
 
 #ifdef OPSEC_USE_MPI
     int nconv = peig(MPI_COMM_WORLD, n, nloc, nev, ncv, S, evals, modes);
@@ -207,7 +213,8 @@ int main(int argc, char* argv[]) {
     /* Free signal matrix memory as soon as possible */
     free(S);
 
-    opsec_info("Writing eigenmodes and eigenvalues to file...\n");
+    if(me == 0)
+        opsec_info("Writing eigenmodes and eigenvalues to file...\n");
 
     /* Prepare headers in output files */
     real* v = NULL;     // memory for a full eigenvector on root process

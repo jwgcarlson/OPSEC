@@ -17,7 +17,7 @@ CODE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 usage() {
     echo "Usage: $0 all"
     echo "       $0 [targets...]"
-    echo "Valid build targets: cfitsio, arpack, trilinos, gmock, opsec"
+    echo "Valid build targets: cfitsio, arpack, trilinos, cuba, gmock, opsec"
     echo ""
     echo "Note that dependencies are not respected when building targets individually."
     echo "You must make sure to build targets in the correct order, in accordance with"
@@ -27,8 +27,9 @@ usage() {
     echo "  cfitsio: none"
     echo "  arpack: (BLAS), (LAPACK)"
     echo "  trilinos: (BLAS), (LAPACK), (Boost)"
+    echo "  cuba: none"
     echo "  gmock: (FFTW 2)"
-    echo "  opsec: cfitsio, arpack, trilinos, (BLAS), (CImg.h), (libpng)"
+    echo "  opsec: cfitsio, arpack, trilinos, cuba, (BLAS), (CImg.h), (libpng)"
 }
 
 # Load custom compilation flags
@@ -53,31 +54,35 @@ fi
 build() {
     while [ -n "$1" ]; do
         case $1 in
-            cfitsio)
-                cd $CODE
-                $CODE/scripts/build_cfitsio.sh || die
+            cfitsio*)
+                source $CODE/scripts/cfitsio.sh
+                build_cfitsio || die
                 ;;
-            arpack)
+            arpack*)
                 cd $CODE/arpack
                 echo "Building all in $PWD"
                 ./configure --prefix=$PREFIX && make && make install || die
                 ;;
-            trilinos)
-                cd $CODE
-                $CODE/scripts/build_trilinos.sh || die
+            trilinos*)
+                source $CODE/scripts/trilinos.sh
+                build_trilinos || die
                 ;;
-            gmock)
+            cuba*)
+                source $CODE/scripts/cuba.sh
+                build_cuba || die
+                ;;
+            gmock*)
                 cd $CODE/gmock
                 echo "Building all in $PWD"
                 ./configure --prefix=$PREFIX && make && make install || die
                 ;;
-            opsec)
+            opsec*)
                 cd $CODE/opsec
                 echo "Building all in $PWD"
-                ./configure --prefix=$PREFIX && make && make install || die
+                ./configure --prefix=$PREFIX --disable-openmp && make && make install || die
                 ;;
             all)
-                build cfitsio arpack trilinos gmock opsec
+                build cfitsio arpack trilinos cuba gmock opsec
                 ;;
             *)
                 echo "build.sh: invalid build target: $1"

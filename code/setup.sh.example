@@ -19,6 +19,13 @@ export PREFIX="$OPSEC_ROOT"
 #export LAPACK_LIBS=
 #export MPIFLIBS=
 
+# Trilinos
+export TRILINOS_VERSION=10.10.1
+#export TRILINOS_EXTRA_CMAKE_OPTIONS=
+
+# Cuba
+export CUBA_VERSION=3.0
+
 
 ##### Setup for riemann #####
 #export CPPFLAGS="-I/home/jcarlson/include"

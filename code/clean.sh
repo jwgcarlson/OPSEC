@@ -3,6 +3,8 @@
 # Clean script for OPSEC.
 
 
+die() { echo "Clean failed." && exit 1; }
+
 # Ensure opsecrc.sh has been loaded
 if [ -z "$OPSEC_ROOT" ]; then
     echo "You must first load the OPSEC environment by sourcing opsecrc.sh."
@@ -10,24 +12,19 @@ if [ -z "$OPSEC_ROOT" ]; then
 fi
 
 # Determine absolute path to top-level source directory (the location of this script)
-cd `dirname $0`
-export TOP=$PWD
-
-die() {
-    echo "Clean failed."
-    exit 1
-}
+CODE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
-    echo "Usage: $0 [-d] [targets...]"
-    echo "Valid clean targets: cfitsio, arpack, trilinos, gmock, opsec"
+    echo "Usage: $0 [-d | -u] [targets...]"
+    echo "Valid clean targets: cfitsio, arpack, trilinos, cuba, gmock, opsec"
     echo "Options:"
     echo "  -d     Run 'make distclean' instead of 'make clean'"
+    echo "  -u     Run 'make uninstall' instead of 'make clean'"
 }
 
 # Load custom compilation flags
-if [ -e "$TOP/setup.sh" ]; then
-    source "$TOP/setup.sh"
+if [ -e "$CODE/setup.sh" ]; then
+    source "$CODE/setup.sh"
 fi
 
 if [ $# -eq 0 ]; then
@@ -41,32 +38,33 @@ clean() {
     while [ -n "$1" ]; do
         case $1 in
             cfitsio)
-                cd $TOP/cfitsio
-                echo "Cleaning all in $PWD"
-                if [ -e Makefile ]; then
-                    make clean || die
-                fi
+                source $CODE/scripts/cfitsio.sh
+                clean_cfitsio $CLEANTARGET || die
                 ;;
             arpack)
-                cd $TOP/arpack
+                cd $CODE/arpack
                 echo "Cleaning all in $PWD"
                 if [ -e Makefile ]; then
                     make $CLEANTARGET || die
                 fi
                 ;;
             trilinos)
-                cd $TOP
-                $TOP/scripts/clean_trilinos.sh || die
+                source $CODE/scripts/trilinos.sh
+                clean_trilinos $CLEANTARGET || die
+                ;;
+            cuba)
+                source $CODE/scripts/cuba.sh
+                clean_cuba $CLEANTARGET || die
                 ;;
             gmock)
-                cd $TOP/gmock
+                cd $CODE/gmock
                 echo "Cleaning all in $PWD"
                 if [ -e Makefile ]; then
                     make $CLEANTARGET || die
                 fi
                 ;;
             opsec)
-                cd $TOP/opsec
+                cd $CODE/opsec
                 echo "Cleaning all in $PWD"
                 if [ -e Makefile ]; then
                     make $CLEANTARGET || die
@@ -88,6 +86,9 @@ while [ -n "$1" ]; do
     case $1 in
         -d)
             CLEANTARGET=distclean
+            ;;
+        -u)
+            CLEANTARGET=uninstall
             ;;
         -*)
             echo "clean.sh: invalid command line switch: $1"

@@ -208,16 +208,19 @@ int main(int argc, char* argv[]) {
     typedef Anasazi::MultiVecTraits<ST,MV> MVT;
     typedef Anasazi::OperatorTraits<ST,MV,OP> OPT;
 
-    if(me == 0)
-        opsec_info("Initializing eigenproblem...\n");
-
     /* Construct initial vector */
     Teuchos::RCP<MyMultiVec<real> > ivec = Teuchos::rcp(new MyMultiVec<real>(Ncells, block_size));
     ivec->MvRandom();
 
+    if(me == 0)
+        opsec_info("Defining signal matrix operator...\n");
+
     /* Construct operator */
     Teuchos::RCP<MySignalMatrixOperator<real> > op
         = Teuchos::rcp(new MySignalMatrixOperator<real>(coordsys, N1, N2, N3, Ncells, cells, xi, survey));
+
+    if(me == 0)
+        opsec_info("Initializing eigenproblem...\n");
 
     /* Create the eigenproblem */
     Teuchos::RCP<Anasazi::BasicEigenproblem<ST, MV, OP> > problem =

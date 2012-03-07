@@ -55,9 +55,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libklpk_la_LIBADD =
-am_libklpk_la_OBJECTS = abn.lo cfg.lo chealpix.lo eig.lo opsec.lo \
-	rng.lo libklpk_la-sig.lo libklpk_la-slp.lo libklpk_la-Cell.lo \
-	libklpk_la-QSpline.lo libklpk_la-Spline.lo \
+am_libklpk_la_OBJECTS = abn.lo cfg.lo chealpix.lo cubature.lo eig.lo \
+	opsec.lo rng.lo libklpk_la-sig.lo libklpk_la-slp.lo \
+	libklpk_la-Cell.lo libklpk_la-QSpline.lo libklpk_la-Spline.lo \
 	libklpk_la-SplitFile.lo libklpk_la-Survey.lo \
 	libklpk_la-BoxSurvey.lo libklpk_la-SphericalSurvey.lo \
 	libklpk_la-SelectionFunc.lo libklpk_la-SeparationFunc.lo \
@@ -321,8 +321,8 @@ noinst_LTLIBRARIES = libklpk.la
 libklpk_la_SOURCES = \
     MyMatrix.hpp MyMultiVec.h MySignalMatrixOperator.h \
     vec3.h Matrix.h \
-    abn.c cfg.c chealpix.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
-    abn.h cfg.h chealpix.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
+    abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
+    abn.h cfg.h chealpix.h cubature.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
     Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
     Spline.h   SplitFile.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
     SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
@@ -482,6 +482,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/chealpix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comma-comma.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comma_scalapack-comma-scalapack.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cubature.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dot-dot.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate-estimate.Po@am__quote@

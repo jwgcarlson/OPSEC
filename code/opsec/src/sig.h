@@ -17,13 +17,7 @@ void ComputeSignalMatrixBlock(
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
         int coordsys, const Cell* cells, int N1, int N2, int N3,
-        double epsrel = 1e-5, double epsabs = 1e-8);
-void ComputeSignalMatrixBlock(
-        int n, int nrows, const int* rows, int ncols, const int* cols,
-        real* s, int lld,
-        const XiFunc& xi, Survey* survey,
-        int coordsys, const Cell* cells, int N1, int N2, int N3,
-        double epsrel = 1e-5, double epsabs = 1e-8);
+        double epsrel = 1e-5, double epsabs = 1e-10);
 
 void ComputeSignalMatrixBlockC(
         int n, int nrows, const int* rows, int ncols, const int* cols,
@@ -62,7 +56,7 @@ real* ReadModes(const char* modefile, int* Nmodes = NULL, int* Ncells = NULL);
 
 /* Auxiliary routines, should not be public anymore.
  * ... Except yes they have to be for dot to be able to compute variances in counts. */
-double ComputeSignalS(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10);
-double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10, int* neval = NULL);
+double ComputeSignalS(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10, double* err = NULL);
+double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel = 1e-5, double epsabs = 1e-10, double* err = NULL);
 
 #endif // SIG_H

@@ -27,14 +27,39 @@ using std::vector;
 #include "XiFunc.h"
 #include "abn.h"
 #include "cfg.h"
+#include "cubature.h"
 #include "rng.h"
 
-template<typename T> static inline T sq(T x) { return x*x; }
+#ifndef SIGNAL_MAXEVAL
+#  define SIGNAL_MAXEVAL 50000000
+#endif
+
 template<typename T> static inline T cb(T x) { return x*x*x; }
 template<typename T> static inline void swap(T& x, T& y) { T tmp = x; x = y; y = tmp; }
 
 /* Parameters:
- * n : size of global signal matrix
+ * n: size of global signal matrix
+ * rows: array of row indices for the requested block (need not be consecutive)
+ * cols: array of column indices for the requested block (need not be consecutive)
+ * s : array of length at least n*lld
+ * lld : leading dimension of local block s
+ * xi : 2-point correlation function
+ * ... : ... */
+void ComputeSignalMatrixBlock(
+        int n, const vector<int>& rows, const vector<int>& cols,
+        real* s, int lld,
+        const XiFunc& xi, Survey* survey,
+        int coordsys, const Cell* cells, int N1, int N2, int N3,
+        double epsrel, double epsabs)
+{
+    if(coordsys == CoordSysCartesian)
+        ComputeSignalMatrixBlockC(n, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+    else if(coordsys == CoordSysSpherical)
+        ComputeSignalMatrixBlockS(n, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+}
+
+/* Parameters:
+ * n: size of global signal matrix
  * nrows : number of rows in the requested block
  * rows : indices of requested rows (might not be consecutive)
  * ncols : number of columns in the requested block
@@ -43,30 +68,6 @@ template<typename T> static inline void swap(T& x, T& y) { T tmp = x; x = y; y =
  * lld : leading dimension of local block s
  * xi : 2-point correlation function
  * ... : ... */
-void ComputeSignalMatrixBlock(
-        int n, int nrows, const int* rows, int ncols, const int* cols,
-        real* s, int lld,
-        const XiFunc& xi, Survey* survey,
-        int coordsys, const Cell* cells, int N1, int N2, int N3,
-        double epsrel, double epsabs)
-{
-    if(coordsys == CoordSysCartesian)
-        ComputeSignalMatrixBlockC(n, nrows, rows, ncols, cols, s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
-    else if(coordsys == CoordSysSpherical)
-        ComputeSignalMatrixBlockS(n, nrows, rows, ncols, cols, s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
-}
-
-void ComputeSignalMatrixBlock(
-        int n, const vector<int>& rows, const vector<int>& cols,
-        real* s, int lld,
-        const XiFunc& xi, Survey* survey,
-        int coordsys, const Cell* cells, int N1, int N2, int N3,
-        double epsrel, double epsabs)
-{
-    ComputeSignalMatrixBlock(n, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0],
-                             s, lld, xi, survey, coordsys, cells, N1, N2, N3, epsrel, epsabs);
-}
-
 void ComputeSignalMatrixBlockC(
         int n, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
@@ -84,7 +85,7 @@ void ComputeSignalMatrixBlockC(
 
     SeparationFunc sep = survey->GetSeparationFunction();
 
-    #pragma omp parallel for
+//    #pragma omp parallel for
     for(int i = 0; i < nrows; i++) {
         int a = rows[i];
         int da = cells[a].G / (Ny*Nz);
@@ -164,7 +165,7 @@ void ComputeSignalMatrixBlockS(
                 cache[k] = uninitialized;
 
             /* For fixed arcs ha and hb, iterate over cell pairs */
-            #pragma omp parallel for
+//            #pragma omp parallel for
             for(int ia = 0; ia < na; ia++) {
                 int a = acells[ia];
                 int i = rows_g2l[a];
@@ -202,6 +203,7 @@ void ComputeSignalMatrixBlockS(
             assert(s[i + j*lld] != uninitialized);
 }
 
+#if 0
 /* Compute the (unnormalized) signal matrix element $S_{ab}$, where a = c1.a
  * and b = c2.a, by performing a Monte Carlo integral over the 6-dimensional
  * volume $V_a \times V_b$.  The normalization factor $\sqrt{\Nbar_a \Nbar_b}$
@@ -258,6 +260,7 @@ double ComputeSignalS(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
     }
     return Q;
 }
+#endif
 
 real* ComputeSignalMatrixS(
     size_t n, size_t nloc, int amin, const Cell* cells,
@@ -275,8 +278,7 @@ real* ComputeSignalMatrixS(
         fprintf(stderr, "ComputeSignalMatrixS: could not allocate %zd bytes for local signal matrix\n", nloc*n*sizeof(real));
         return NULL;
     }
-    printf("Allocated %.1f MB for local signal matrix.\n", nloc*double(n*sizeof(real))/(1024.*1024.));
-    fflush(stdout);
+    opsec_info("Allocated %.1f MB for local signal matrix.\n", nloc*double(n*sizeof(real))/(1024.*1024.));
 
     /* Set local signal matrix values to uninitialized */
     for(ptrdiff_t i = 0; i < n*nloc; i++)
@@ -325,7 +327,7 @@ real* ComputeSignalMatrixS(
                 cache[k] = uninitialized;
 
             /* For fixed (da,ea) and (db,eb), iterate over cell pairs */
-            #pragma omp parallel for private(ia,ib,a,b,fa,fb,k,Q)
+//            #pragma omp parallel for private(ia,ib,a,b,fa,fb,k,Q)
             for(ia = 0; ia < na; ia++) {
                 a = acells[ia];
                 if(a < amin || a > amax)
@@ -366,12 +368,106 @@ real* ComputeSignalMatrixS(
     return S;
 }
 
-static inline double norm(double dx, double dy, double dz) {
-    return sqrt(dx*dx + dy*dy + dz*dz);
+struct CubatureData {
+    double min[6];
+    double max[6];
+    const XiFunc& xi;
+    const SeparationFunc& sep;
+};
+
+static void cartesian_integrand(unsigned ndim, unsigned npt, const double* x, void* vdata, unsigned fdim, double* fval) {
+#ifdef OPSEC_DEBUG
+    assert(ndim == 6 && fdim == 1);
+#endif
+    CubatureData* data = (CubatureData*) vdata;
+    double xmin1 = data->min[0], ymin1 = data->min[1], zmin1 = data->min[2],
+           xmin2 = data->min[3], ymin2 = data->min[4], zmin2 = data->min[5];
+    double xmax1 = data->max[0], ymax1 = data->max[1], zmax1 = data->max[2],
+           xmax2 = data->max[3], ymax2 = data->max[4], zmax2 = data->max[5];
+    const XiFunc& xi = data->xi;
+    const SeparationFunc& sep = data->sep;
+    Point p1, p2;
+    #pragma omp parallel for private(p1,p2)
+    for(unsigned i = 0; i < npt; i++) {
+        const double* u = &x[6*i];
+        p1.x = (1 - u[0])*xmin1 + u[0]*xmax1;
+        p1.y = (1 - u[1])*ymin1 + u[1]*ymax1;
+        p1.z = (1 - u[2])*zmin1 + u[2]*zmax1;
+        p2.x = (1 - u[3])*xmin2 + u[3]*xmax2;
+        p2.y = (1 - u[4])*ymin2 + u[4]*ymax2;
+        p2.z = (1 - u[5])*zmin2 + u[5]*zmax2;
+        fval[i] = xi(p1, p2, sep);
+    }
 }
 
+double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel, double epsabs, double* err_) {
+    CubatureData data = {
+        { c1.xmin, c1.ymin, c1.zmin, c2.xmin, c2.ymin, c2.zmin },
+        { c1.xmax, c1.ymax, c1.zmax, c2.xmax, c2.ymax, c2.zmax },
+        xi,
+        sep
+    };
+    double xmin[6] = { 0, 0, 0, 0, 0, 0 };
+    double xmax[6] = { 1, 1, 1, 1, 1, 1 };
+    unsigned maxeval = SIGNAL_MAXEVAL;
+    double val, err;
+    int okay = adapt_integrate_v(1, cartesian_integrand, (void*) &data,
+                                 6, xmin, xmax,
+                                 maxeval, epsrel, epsabs,
+                                 &val, &err);
+    if(err_ != NULL)
+        *err_ = err;
+    return val;
+}
+
+static void spherical_integrand(unsigned ndim, unsigned npt, const double* x, void* vdata, unsigned fdim, double* fval) {
+#ifdef OPSEC_DEBUG
+    assert(ndim == 6 && fdim == 1);
+#endif
+    CubatureData* data = (CubatureData*) vdata;
+    double rmin1cb = data->min[0], mumin1 = data->min[1], phimin1 = data->min[2],
+           rmin2cb = data->min[3], mumin2 = data->min[4], phimin2 = data->min[5];
+    double rmax1cb = data->max[0], mumax1 = data->max[1], phimax1 = data->max[2],
+           rmax2cb = data->max[3], mumax2 = data->max[4], phimax2 = data->max[5];
+    const XiFunc& xi = data->xi;
+    const SeparationFunc& sep = data->sep;
+    Point p1, p2;
+    #pragma omp parallel for private(p1,p2)
+    for(unsigned i = 0; i < npt; i++) {
+        const double* u = &x[6*i];
+        p1.r = cbrt((1-u[0]) * rmin1cb +  u[0] * rmax1cb);
+        p2.r = cbrt((1-u[1]) * rmin2cb +  u[1] * rmax2cb);
+        p1.mu =     (1-u[2]) * mumin1  +  u[2] * mumax1;
+        p2.mu =     (1-u[3]) * mumin2  +  u[3] * mumax2;
+        p1.phi =    (1-u[4]) * phimin1 +  u[4] * phimax1;
+        p2.phi =    (1-u[5]) * phimin2 +  u[5] * phimax2;
+        fval[i] = xi(p1, p2, sep);
+    }
+}
+
+double ComputeSignalS(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel, double epsabs, double* err_) {
+    CubatureData data = {
+        { cb(c1.rmin), c1.mumin, c1.phimin, cb(c2.rmin), c2.mumin, c2.phimin },
+        { cb(c1.rmax), c1.mumax, c1.phimax, cb(c2.rmax), c2.mumax, c2.phimax },
+        xi,
+        sep
+    };
+    double xmin[6] = { 0, 0, 0, 0, 0, 0 };
+    double xmax[6] = { 1, 1, 1, 1, 1, 1 };
+    unsigned maxeval = SIGNAL_MAXEVAL;
+    double val, err;
+    adapt_integrate_v(1, spherical_integrand, (void*) &data,
+                      6, xmin, xmax,
+                      maxeval, epsrel, epsabs,
+                      &val, &err);
+    if(err_ != NULL)
+        *err_ = err;
+    return val;
+}
+
+#if 0
 double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const SeparationFunc& sep, double epsrel, double epsabs, int* neval) {
-    const int lg2n_min = 3, lg2n_max = 30;
+    const int lg2n_min = 3, lg2n_max = 25;
 
     /* Swap coordinate boundaries (exploiting translational symmetry) to
      * ensure consistent numerical values for matrix elements. */
@@ -395,8 +491,10 @@ double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
     }
 
     /* Initialize quasi-random sequence generator. */
-    Sobol sobol;
-    rng_sobol_init(&sobol, 6);
+//    Sobol sobol;
+//    rng_sobol_init(&sobol, 6);
+    rng_state rng;
+    rng_init_r(&rng, 72);
     double u[6];        // quasi-random point in the 6-D unit cube
 
     int n = 0;
@@ -406,7 +504,9 @@ double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
     for(int lg2n = lg2n_min; lg2n <= lg2n_max; lg2n++) {
         int ngoal = (1 << lg2n);
         while(n < ngoal) {
-            rng_sobol_get(&sobol, u);
+//            rng_sobol_get(&sobol, u);
+            for(int i = 0; i < 6; i++)
+                u[i] = rng_uniform_r(&rng);
             p1.x = (1 - u[0])*xmin1 + u[0]*xmax1;
             p1.y = (1 - u[1])*ymin1 + u[1]*ymax1;
             p1.z = (1 - u[2])*zmin1 + u[2]*zmax1;
@@ -435,6 +535,7 @@ double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
         *neval = n;
     return Q;
 }
+#endif
 
 real* ComputeSignalMatrixC(
     size_t n, size_t nloc, int amin,
