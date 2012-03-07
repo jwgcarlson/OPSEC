@@ -23,8 +23,8 @@ export PREFIX="$OPSEC_ROOT"
 export TRILINOS_VERSION=10.10.1
 #export TRILINOS_EXTRA_CMAKE_OPTIONS=
 
-# Cuba
-export CUBA_VERSION=3.0
+# OpenBLAS (optional)
+export OPENBLAS_VERSION=git
 
 
 ##### Setup for riemann #####
