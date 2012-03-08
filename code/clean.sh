@@ -16,7 +16,7 @@ CODE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
     echo "Usage: $0 [-d | -u] [targets...]"
-    echo "Valid clean targets: cfitsio, openblas, arpack, trilinos, gmock, opsec"
+    echo "Valid clean targets: cfitsio, openblas, scalapack, arpack, trilinos, gmock, opsec"
     echo "Options:"
     echo "  -d     Run 'make distclean' instead of 'make clean'"
     echo "  -u     Run 'make uninstall' instead of 'make clean'"
@@ -36,6 +36,7 @@ CLEANTARGET=clean
 
 clean() {
     while [ -n "$1" ]; do
+        cd $CODE
         case $1 in
             cfitsio)
                 source $CODE/scripts/cfitsio.sh
@@ -44,6 +45,10 @@ clean() {
             openblas)
                 source $CODE/scripts/openblas.sh
                 clean_openblas $CLEANTARGET || die
+                ;;
+            scalapack)
+                source $CODE/scripts/scalapack.sh
+                clean_scalapack $CLEANTARGET || die
                 ;;
             arpack)
                 cd $CODE/arpack

@@ -17,7 +17,7 @@ CODE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 usage() {
     echo "Usage: $0 all"
     echo "       $0 [targets...]"
-    echo "Valid build targets: cfitsio, openblas, arpack, trilinos, gmock, opsec"
+    echo "Valid build targets: cfitsio, openblas, scalapack, arpack, trilinos, gmock, opsec"
     echo ""
     echo "Note that dependencies are not respected when building targets individually."
     echo "You must make sure to build targets in the correct order, in accordance with"
@@ -26,6 +26,7 @@ usage() {
     echo "Library dependencies:"
     echo "  cfitsio: none"
     echo "  openblas: none"
+    echo "  scalapack: (BLAS), (LAPACK)"
     echo "  arpack: (BLAS), (LAPACK)"
     echo "  trilinos: (BLAS), (LAPACK), (Boost)"
     echo "  gmock: (FFTW 2)"
@@ -62,6 +63,10 @@ build() {
                 source $CODE/scripts/openblas.sh
                 build_openblas || die
                 ;;
+            scalapack*)
+                source $CODE/scripts/scalapack.sh
+                build_scalapack || die
+                ;;
             arpack*)
                 cd $CODE/arpack
                 echo "Building all in $PWD"
@@ -94,6 +99,7 @@ build() {
 }
 
 while [ -n "$1" ]; do
+    cd $CODE
     case $1 in
         -h)
             usage
