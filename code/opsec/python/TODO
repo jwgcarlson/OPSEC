@@ -1,1 +1,2 @@
 - make abn_read() able to read small chunks of data at a time
+- organize this mess into a coherent Python module

@@ -3,12 +3,12 @@
 
 #include "QSpline.h"
 
-vector<double> QSpline::MakeArray(int n1, int n2, double x1, double x2) {
+std::vector<double> QSpline::MakeArray(int n1, int n2, double x1, double x2) {
     /* Create array of n1 linearly spaced values, plus n2 logarithmically
      * values. */
     assert(x1 >= 0 && x2 >= x1);
     int n = n1 + n2;
-    vector<double> X(n);
+    std::vector<double> X(n);
     for(int i = 0; i < n1; i++)
         X[i] = i * x1 / n1;
     for(int j = 0; j < n2; j++)
@@ -32,13 +32,13 @@ QSpline::QSpline(int n1, int n2, const double x[], const double y[]) {
     F1 = LinearSpline(n1+1, &x[0], &y[0]);
 
     /* Logarithmic section: use u = log(x) for indexing */
-    vector<double> u(n2);
+    std::vector<double> u(n2);
     for(int j = 0; j < n2; j++)
         u[j] = log(x[n1 + j]);
     F2 = LinearSpline(n2, &u[0], &y[n1]);
 }
 
-QSpline::QSpline(int n1, int n2, const vector<double>& x, const vector<double>& y) {
+QSpline::QSpline(int n1, int n2, const std::vector<double>& x, const std::vector<double>& y) {
     int n = (int) x.size();
     assert(n >= 2 && n1 >= 0 && n2 >= 0 && n1 + n2 == n && (int) y.size() >= n);
     x1 = x[n1];
@@ -49,7 +49,7 @@ QSpline::QSpline(int n1, int n2, const vector<double>& x, const vector<double>& 
     F1 = LinearSpline(n1+1, &x[0], &y[0]);
 
     /* Logarithmic section: use u = log(x) for indexing */
-    vector<double> u(n2);
+    std::vector<double> u(n2);
     for(int j = 0; j < n2; j++)
         u[j] = log(x[n1 + j]);
     F2 = LinearSpline(n2, &u[0], &y[n1]);

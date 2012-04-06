@@ -2,11 +2,13 @@ CC = $(MPICC)
 CXX = $(MPICXX)
 
 # configure script decides which utilities to build
-bin_PROGRAMS = $(UTILITIES)
-EXTRA_PROGRAMS = dm2abn gmock hpx2img img2hpx makeradial multipole realmock vagc2abn
+bin_PROGRAMS = $(UTILITIES) legendre
+EXTRA_PROGRAMS = dm2abn gmock hpx2img img2hpx legendre makeradial multipole realmock vagc2abn
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -DHAVE_MPI=1
 AM_LDFLAGS = -L$(top_builddir)/src -lklpk
+
+legendre_SOURCES = legendre.cpp
 
 dm2abn_SOURCES = dm2abn.cpp
 

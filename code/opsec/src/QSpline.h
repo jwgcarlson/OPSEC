@@ -2,7 +2,6 @@
 #define QSPLINE_H
 
 #include <vector>
-using std::vector;
 
 #include "Spline.h"
 
@@ -20,7 +19,7 @@ class QSpline {
 public:
     QSpline();
     QSpline(int n1, int n2, const double x[], const double y[]);
-    QSpline(int n1, int n2, const vector<double>& x, const vector<double>& y);
+    QSpline(int n1, int n2, const std::vector<double>& x, const std::vector<double>& y);
     ~QSpline();
 
     double operator()(double x) const;
@@ -29,7 +28,7 @@ public:
      * spaced over [0,x1], and the last n2 elements logarithmically spaced over
      * [x1,x2].  Element number 0 is equal to 0, element number n1 is equal to
      * x1, and the last element (number n1+n2-1) is equal to x2. */
-    static vector<double> MakeArray(int n1, int n2, double x1, double x2);
+    static std::vector<double> MakeArray(int n1, int n2, double x1, double x2);
 
 protected:
     Spline F1;

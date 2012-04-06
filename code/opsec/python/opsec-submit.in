@@ -1,0 +1,227 @@
+#!@PYTHON@
+#
+# opsec-submit
+#
+# Script to run an OPSEC job (either directly, or by submitting to a batch
+# queue on a cluster).
+#
+# 
+
+import getopt, os, subprocess, sys
+from cfg import *
+
+def usage():
+    print "Usage: %s [options] prog1 prog2 ..." % sys.argv[0]
+    print "Valid options:"
+    print "  -b name=value : set batch configuration option"
+    print "  -B file : load batch configuration options from file"
+    print "  -c name=value : set OPSEC configuration option"
+    print "  -C file : load OPSEC configuration options from file"
+    print "  -f file : write run script to specified file (default run.sh)"
+    print "  -l,--local : run job locally (as opposed to queueing with a resource manager)"
+    print "  -s,--serial : run job serially (without MPI)"
+    print "  -h,--help : print this help and exit"
+#    print "  --help-batch : print detailed help on batch configuration options"
+    print "The following environment variable are respected:"
+    print "  MPIRUN : program to use for running MPI jobs"
+    print "  QSUB : program to use for submitting batch jobs to resource manager"
+
+def write_pbs_header(f, pbs):
+    """Write PBS script header to the file `f', using values from the dictionary `pbs'.
+    Valid dictionary keys:
+        name, queue, nodes, ppn, walltime, extra_resources, stdout, stderr, join,
+        keep, export, interactive
+    """
+    if 'name' in pbs.keys():
+        print >> f, "#PBS -N %s" % pbs['name']
+    if 'queue' in pbs.keys():
+        print >> f, "#PBS -q %s" % pbs['queue']
+    if 'nodes' in pbs.keys() and 'ppn' in pbs.keys():
+        print >> f, "#PBS -l nodes=%d:ppn=%d" % (pbs['nodes'],pbs['ppn'])
+    if 'walltime' in pbs.keys():
+        print >> f, "#PBS -l walltime=%s" % pbs['walltime']
+    if 'extra_resources' in pbs.keys():
+        print >> f, "#PBS -l %s" % pbs['extra_resources']
+    if 'stdout' in pbs.keys():
+        print >> f, "#PBS -o %s" % pbs['stdout']
+    if 'stderr' in pbs.keys():
+        print >> f, "#PBS -e %s" % pbs['stderr']
+    if 'join' in pbs.keys() and pbs['join'] != 'n':
+        print >> f, "#PBS -j %s" % pbs['join']
+    if 'keep' in pbs.keys() and pbs['keep'] != 'n':
+        print >> f, "#PBS -k %s" % pbs['keep']
+    if 'export' in pbs.keys() and str(pbs['export']).lower() in ('true','yes','1'):
+        print >> f, "#PBS -V"
+    if 'interactive' in pbs.keys() and str(pbs['interactive']).lower() in ('true','yes','1'):
+        print >> f, "#PBS -I"
+
+def write_pbs_job_script(scriptname, programs, options, mpirun, pbs):
+    """Write a job submission script for OPSEC.
+    `scriptname' is the name of the file to write to.
+    `programs' is the list of OPSEC programs to run.
+    `options' is a list of command line options to pass to each OPSEC program.
+    `mpirun' is the mpirun command to use for launching the programs.
+    `pbs' is a dictionary of PBS options.
+    """
+    # Begin script
+    f = open(scriptname, "w")
+    print >> f, "#!/bin/sh"
+    write_pbs_header(f, pbs)
+    print >> f, '# Change to work directory'
+    print >> f, 'cd $PBS_O_WORKDIR'
+    print >> f, '# Check environment'
+    print >> f, 'if test -z "$OPSEC_ROOT"; then'
+    print >> f, '  echo "OPSEC environment not set up properly!  Source your opsecrc.sh file."'
+    print >> f, '  exit 1'
+    print >> f, 'fi'
+
+    if isinstance(options, str):
+        pass
+    elif hasattr(options, "__iter__"):
+        options = " ".join(options)
+
+    print >> f, '# Run OPSEC programs in sequence'
+    print >> f, 'for prog in %s; do' % " ".join(programs)
+    print >> f, '  echo "Starting $prog at `date`"'
+    if mpirun:
+        print >> f, '  %s -np %d -pernode -hostfile $PBS_NODEFILE $prog %s || exit 1' % (mpirun,pbs['nodes'],options)
+    else:
+        print >> f, '  $prog %s || exit 1' % (mpirun,options)
+    print >> f, '  echo "$prog finished at `date`"'
+    print >> f, '  echo "%s"' % ('='*80)
+    print >> f, 'done'
+    f.close()
+
+    os.chmod(scriptname, 0755)
+
+
+def write_local_run_script(scriptname, programs, options, mpirun):
+    """Write a simple run script for OPSEC.
+    `scriptname' is the name of the file to write to.
+    `programs' is the list of OPSEC programs to run.
+    `options' is a list of command line options to pass to each OPSEC program.
+    `mpirun' is the mpirun command to use for launching the programs.
+    """
+    f = open(scriptname, "w")
+    print >> f, '#!/bin/sh'
+    print >> f, '# Check environment'
+    print >> f, 'if test -z "$OPSEC_ROOT"; then'
+    print >> f, '  echo "OPSEC environment not set up properly!  Source your opsecrc.sh file."'
+    print >> f, '  exit 1'
+    print >> f, 'fi'
+
+    if isinstance(options, str):
+        pass
+    elif hasattr(options, "__iter__"):
+        options = " ".join(options)
+
+    print >> f, '# Run OPSEC programs in sequence'
+    print >> f, 'for prog in %s; do' % " ".join(programs)
+    print >> f, '  echo "Starting $prog at `date`"'
+    print >> f, '  %s $prog %s || exit 1' % (mpirun,options)
+    print >> f, '  echo "$prog finished at `date`"'
+    print >> f, '  echo "%s"' % ('='*80)
+    print >> f, 'done'
+    f.close()
+
+    os.chmod(scriptname, 0755)
+
+
+def main():
+    # Make sure OPSEC environment has been set up
+    if not os.getenv("OPSEC_ROOT"):
+        print >> sys.stderr, "OPSEC environment not set up properly!  Source your opsecrc.sh file."
+        sys.exit(1)
+
+    # List of OPSEC programs to run, in order
+    programs = []
+
+    # Option string to pass to each OPSEC program
+    options = ""
+
+    # Default PBS options
+    pbs = { 'name': "OPSEC",
+            'nodes': 1,
+            'ppn': 1,
+            'walltime': "00:30:00",
+            'join': True,
+            'stdout': "stdout",
+            'export': True }
+
+    # Name of run script to write to
+    scriptname = "run.sh"
+
+    # mpirun command
+    mpirun = os.getenv("MPIRUN")
+    if not mpirun:
+        mpirun = "mpirun"
+
+    # qsub command
+    qsub = os.getenv("QSUB")
+    if not qsub:
+        qsub = "qsub"
+
+    # Whether to run the job locally (true) or as a PBS job (false)
+    local = False
+
+    # Parse command line options
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "haslf:b:B:c:C:", ["help", "serial", "local"])
+    except getopt.GetoptError, err:
+        print str(err)
+        usage()
+        sys.exit(1)
+    for o, a in opts:
+        if o in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif o in ("-s", "--serial"):
+            mpirun = ""
+        elif o in ("-l", "--local"):
+            local = True
+        elif o == "-b":
+            pbs.update(cfg_read_line(a))
+        elif o == "-B":
+            pbs.update(cfg_read(a))
+        elif o == "-c":
+            options += " " + a
+        elif o == "-C":
+            options += " -C " + a
+        elif o == "-f":
+            scriptname = a
+        else:
+            assert False, "unhandled option"
+    for a in args:
+        if a == "full":
+            programs += ["basis", "klt", "comma", "dot", "estimate"]
+        else:
+            programs.append(a)
+
+    if not programs:
+        programs += ["basis", "klt", "comma", "dot", "estimate"]
+
+    if mpirun:
+        print "Using MPI with %s" % mpirun
+    else:
+        print "Not using MPI"
+
+    if local:
+        print "Writing local run script to %s" % scriptname
+        write_local_run_script(scriptname, programs, options, mpirun)
+        print "Executing run script..."
+        os.execl(scriptname, scriptname)
+    else:
+        print "Writing PBS batch script to %s" % scriptname
+        write_pbs_job_script(scriptname, programs, options, mpirun, pbs)
+
+        print "Submitting PBS job to %s queue..." % pbs['queue']
+        try:
+            err = subprocess.call([qsub,scriptname])
+            if err: raise
+            print "Job successfully submitted"
+        except:
+            print "Failed to submit job"
+
+
+if __name__ == "__main__":
+    main()

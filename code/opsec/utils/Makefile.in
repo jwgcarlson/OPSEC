@@ -34,9 +34,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+bin_PROGRAMS = $(UTILITIES) legendre$(EXEEXT)
 EXTRA_PROGRAMS = dm2abn$(EXEEXT) gmock$(EXEEXT) hpx2img$(EXEEXT) \
-	img2hpx$(EXEEXT) makeradial$(EXEEXT) multipole$(EXEEXT) \
-	realmock$(EXEEXT) vagc2abn$(EXEEXT)
+	img2hpx$(EXEEXT) legendre$(EXEEXT) makeradial$(EXEEXT) \
+	multipole$(EXEEXT) realmock$(EXEEXT) vagc2abn$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -70,6 +71,9 @@ hpx2img_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_img2hpx_OBJECTS = img2hpx.$(OBJEXT)
 img2hpx_OBJECTS = $(am_img2hpx_OBJECTS)
 img2hpx_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_legendre_OBJECTS = legendre.$(OBJEXT)
+legendre_OBJECTS = $(am_legendre_OBJECTS)
+legendre_LDADD = $(LDADD)
 am_makeradial_OBJECTS = makeradial.$(OBJEXT)
 makeradial_OBJECTS = $(am_makeradial_OBJECTS)
 makeradial_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -99,11 +103,11 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(dm2abn_SOURCES) $(gmock_SOURCES) $(hpx2img_SOURCES) \
-	$(img2hpx_SOURCES) $(makeradial_SOURCES) $(multipole_SOURCES) \
-	$(realmock_SOURCES) $(vagc2abn_SOURCES)
+	$(img2hpx_SOURCES) $(legendre_SOURCES) $(makeradial_SOURCES) \
+	$(multipole_SOURCES) $(realmock_SOURCES) $(vagc2abn_SOURCES)
 DIST_SOURCES = $(dm2abn_SOURCES) $(gmock_SOURCES) $(hpx2img_SOURCES) \
-	$(img2hpx_SOURCES) $(makeradial_SOURCES) $(multipole_SOURCES) \
-	$(realmock_SOURCES) $(vagc2abn_SOURCES)
+	$(img2hpx_SOURCES) $(legendre_SOURCES) $(makeradial_SOURCES) \
+	$(multipole_SOURCES) $(realmock_SOURCES) $(vagc2abn_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -257,11 +261,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-
-# configure script decides which utilities to build
-bin_PROGRAMS = $(UTILITIES)
 AM_CPPFLAGS = -I$(top_srcdir)/src -DHAVE_MPI=1
 AM_LDFLAGS = -L$(top_builddir)/src -lklpk
+legendre_SOURCES = legendre.cpp
 dm2abn_SOURCES = dm2abn.cpp
 gmock_SOURCES = gmock.cpp grid.cpp
 gmock_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -368,6 +370,9 @@ hpx2img$(EXEEXT): $(hpx2img_OBJECTS) $(hpx2img_DEPENDENCIES)
 img2hpx$(EXEEXT): $(img2hpx_OBJECTS) $(img2hpx_DEPENDENCIES) 
 	@rm -f img2hpx$(EXEEXT)
 	$(CXXLINK) $(img2hpx_OBJECTS) $(img2hpx_LDADD) $(LIBS)
+legendre$(EXEEXT): $(legendre_OBJECTS) $(legendre_DEPENDENCIES) 
+	@rm -f legendre$(EXEEXT)
+	$(CXXLINK) $(legendre_OBJECTS) $(legendre_LDADD) $(LIBS)
 makeradial$(EXEEXT): $(makeradial_OBJECTS) $(makeradial_DEPENDENCIES) 
 	@rm -f makeradial$(EXEEXT)
 	$(CXXLINK) $(makeradial_OBJECTS) $(makeradial_LDADD) $(LIBS)
@@ -392,6 +397,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gmock-grid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx2img.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/img2hpx.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/legendre.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/makeradial.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multipole-multipole.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/realmock.Po@am__quote@
