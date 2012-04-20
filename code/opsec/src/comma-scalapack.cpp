@@ -1,4 +1,4 @@
-/* comma-anasazi
+/* comma
  *
  * Compute the derivatives of the covariance matrix with respect to the model
  * parameters.  First compute this matrix in the cell basis, then use the KL
@@ -44,22 +44,65 @@ const char* usage =
     "  cellfile=FILE  Read list of cells from FILE (required)\n"
     "  modefile=FILE  Read KL modes from FILE (required)\n"
     "  covfile=FILE   Write covariance matrices to FILE (required)\n"
-    "  Nmodes=NUM     Number of KL modes\n"
+    "  Nmodes=NUM     Number of KL modes (required)\n"
     "  model=NAME     Use specified model (required)\n"
     "  coordsys=TYPE  Coordinate system; either spherical or cartesian (required)\n"
     "  Nr,Nmu,Nphi    Spherical grid (required if coordsys = spherical)\n"
     "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n";
 
-static inline int divup(int n, int k) {
-    return (n + k - 1)/k;
+/* Read mode matrix B from file */
+void ReadModes(const slp::Context& pcontext, const char* modefile, int Ncells, int Nmodes, slp::Matrix<real>& B) {
+    int me = 0;
+#ifdef OPSEC_USE_MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
+#endif
+
+    /* Create Ncells-by-1 vector on the root process */
+    slp::Descriptor* zdesc = pcontext.new_descriptor(Ncells, 1, Ncells, 1);
+    real* zvalues = (real*) opsec_malloc(zdesc->local_size() * sizeof(real));
+    slp::Matrix<real> z(zdesc, zvalues);
+
+    /* Read modes file header */
+    SplitFile fmodes;
+    if(me == 0) {
+        fmodes.open(modefile, "r");
+        if(!fmodes.isopen()) {
+            opsec_error("comma: cannot open modes file %s\n", modefile);
+            opsec_abort(1);
+        }
+
+        size_t n, size;
+        char endian, fmt[ABN_MAX_FORMAT_LENGTH];
+        Config opts = cfg_new();
+        abn_read_header(fmodes, &n, &size, &endian, fmt, opts);
+        if(cfg_has_key(opts, "Nmodes"))
+            assert(cfg_get_int(opts, "Nmodes") == Nmodes);
+        if(cfg_has_key(opts, "Ncells"))
+            assert(cfg_get_int(opts, "Ncells") == Ncells);
+        cfg_destroy(opts);
+    }
+
+    /* Read modes one at a time, redistributing from root process to full process grid */
+    for(int j = 0; j < Nmodes; j++) {
+        if(me == 0) {
+            size_t nread = fmodes.read((char*) zvalues, Ncells*sizeof(real));
+            if(nread != Ncells*sizeof(real)) {
+                opsec_error("comma: error reading modes (%s,%d,%zd,%d)\n", fmodes.get_filename().c_str(), j, nread, Ncells);
+                opsec_abort(1);
+            }
+        }
+
+        slp::redistribute(Ncells, 1, z, 0, 0, B, 0, j);
+    }
+
+    delete zdesc;
+    free(zvalues);
 }
 
 int main(int argc, char* argv[]) {
-    int Ncells, Nmodes, Nparams;
-    const char *cellfile, *modefile, *covfile;
-
-#ifdef OPSEC_USE_MPI
+    /* Initialize MPI */
     int nprocs = 1, me = 0;
+#ifdef OPSEC_USE_MPI
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
@@ -74,10 +117,10 @@ int main(int argc, char* argv[]) {
         if(me == 0) fputs(usage, stderr);
         opsec_exit(1);
     }
-    cellfile = cfg_get(cfg, "cellfile");
-    modefile = cfg_get(cfg, "modefile");
-    covfile = cfg_get(cfg, "covfile");
-    Nmodes = cfg_get_int(cfg, "Nmodes");
+    const char* cellfile = cfg_get(cfg, "cellfile");
+    const char* modefile = cfg_get(cfg, "modefile");
+    const char* covfile = cfg_get(cfg, "covfile");
+    int Nmodes = cfg_get_int(cfg, "Nmodes");
 
     /* Decide how best to partition available processes into 2-D process grid */
     int nprow, npcol;
@@ -141,7 +184,7 @@ int main(int argc, char* argv[]) {
     Model* model = InitializeModel(cfg);
     if(!model)
         opsec_exit(1);
-    Nparams = model->NumParams();
+    int Nparams = model->NumParams();
 
     /* Load survey */
     Survey* survey = InitializeSurvey(cfg);
@@ -149,6 +192,7 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
 
     /* Read cells from file */
+    int Ncells;
     Cell* cells = ReadCells(cellfile, &Ncells);
     if(cells == NULL)
         opsec_exit(1);
@@ -170,48 +214,8 @@ int main(int argc, char* argv[]) {
     real* Bvalues = (real*) opsec_malloc(Bdesc->local_size() * sizeof(real));
     slp::Matrix<real> B(Bdesc, Bvalues);
 
-    { // TODO: ship this off to a helper function
-        /* Create Ncells-by-1 vector on the root process */
-        slp::Descriptor* zdesc = pcontext.new_descriptor(Ncells, 1, Ncells, 1);
-        real* zvalues = (real*) opsec_malloc(zdesc->local_size() * sizeof(real));
-        slp::Matrix<real> z(zdesc, zvalues);
-
-        /* Read modes file header */
-        SplitFile fmodes;
-        if(me == 0) {
-            fmodes.open(modefile, "r");
-            if(!fmodes.isopen())
-                opsec_abort(1);
-
-            size_t n, size;
-            char endian, fmt[ABN_MAX_FORMAT_LENGTH];
-            Config opts = cfg_new();
-            abn_read_header(fmodes, &n, &size, &endian, fmt, opts);
-            if(cfg_has_key(opts, "Nmodes"))
-                assert(cfg_get_int(opts, "Nmodes") == Nmodes);
-            if(cfg_has_key(opts, "Ncells"))
-                assert(cfg_get_int(opts, "Ncells") == Ncells);
-            cfg_destroy(opts);
-        }
-
-        /* Read modes one at a time, redistributing from root process to full process grid */
-        for(int j = 0; j < Nmodes; j++) {
-            if(me == 0) {
-                size_t nread = fmodes.read((char*) zvalues, Ncells*sizeof(real));
-                if(nread != Ncells*sizeof(real)) {
-                    opsec_error("comma: error reading modes (%s,%d,%zd,%d)\n", fmodes.get_filename().c_str(), j, nread, Ncells);
-                    opsec_abort(1);
-                }
-            }
-
-            redistribute(Ncells, 1, z, 0, 0, B, 0, j);
-        }
-
-        delete zdesc;
-        free(zvalues);
-        if(me == 0)
-            fmodes.close();
-    }
+    /* Read in B */
+    ReadModes(pcontext, modefile, Ncells, Nmodes, B);
 
     /* Create Ncells-by-Ncells signal matrix S */
     slp::Descriptor* Sdesc = pcontext.new_descriptor(Ncells, Ncells, Ncells_block, Ncells_block);
@@ -269,27 +273,27 @@ int main(int argc, char* argv[]) {
         for(int bloc = 0; bloc < Sdesc->nloc; bloc++)
             cols[bloc] = Sdesc->col_l2g(bloc);
         ComputeSignalMatrixBlock(Ncells, rows, cols, Svalues, Sdesc->lld,
-                                 xi, survey, coordsys, cells, N1, N2, N3);
+                                 xi, survey, cells, N1, N2, N3);
 
         if(me == 0)
             opsec_info("  Projecting onto mode basis\n");
 
         /* Compute C = S * B */
-        multiply(S, B, C);
+        slp::multiply(S, B, C);
 
         /* Compute P = B^T * C */
-        multiply(B, C, P, 'T', 'N');
+        slp::multiply(B, C, P, 'T', 'N');
 
         if(me == 0)
             opsec_info("  Gathering results on root process and writing to file\n");
 
         /* Gather P to root process, column by column, and write to file */
         for(int j = 0; j < Nmodes; j++) {
-            redistribute(Nmodes, 1, P, 0, j, r, 0, 0);
+            slp::redistribute(Nmodes, 1, P, 0, j, r, 0, 0);
             if(me == 0) {
                 fout.write((char*) rvalues, (j+1)*sizeof(real));
-                for(int i = 0; i <= j; i++)
-                    printf("D[%d](%d,%d) = %g\n", param, i, j, rvalues[i]);
+//                for(int i = 0; i <= j; i++)
+//                    printf("D[%d](%d,%d) = %g\n", param, i, j, rvalues[i]);
             }
         }
     }

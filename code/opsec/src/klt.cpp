@@ -205,7 +205,7 @@ int main(int argc, char* argv[]) {
         opsec_info("Computing eigenmodes of signal matrix...\n");
 
 #ifdef OPSEC_USE_MPI
-    int nconv = peig(MPI_COMM_WORLD, n, nloc, nev, ncv, S, evals, modes);
+    int nconv = peig(n, nloc, nev, ncv, 1e-5, S, evals, modes);
 #else
     int nconv = eig(n, nev, ncv, S, evals, modes);
 #endif

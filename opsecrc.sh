@@ -31,5 +31,5 @@ export PATH="$PATH:$OPSEC_ROOT/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$OPSEC_ROOT/lib"
 if [ -n "$OPSEC_PYTHON" ]; then
     export OPSEC_PYTHON
-    export PYTHONPATH="$PYTHONPATH:$OPSEC_ROOT/lib/python$PYTHON_VERSION"
+    export PYTHONPATH="$PYTHONPATH:$OPSEC_ROOT/lib/python$PYTHON_VERSION/site-packages"
 fi

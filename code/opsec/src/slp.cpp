@@ -89,49 +89,33 @@ int Descriptor::col_l2g(int jloc) const {
 //    return indxl2g_(&jloc, &nb, &context->mycol, &csrc, &context->npcol) - 1;
 }
 
-void multiply(const Matrix<float>& A, const Matrix<float>& B, Matrix<float>& C, char transa, char transb, float alpha, float beta, int ia, int ja, int ib, int jb, int ic, int jc) {
-    int m, n, k;
-    if(transa == 'N') {
-        m = A.desc->m;
-        k = A.desc->n;
-    }
-    else {
-        m = A.desc->n;
-        k = A.desc->m;
-    }
-    if(transb == 'N') {
-        n = B.desc->n;
-        assert(B.desc->m == k);
-    }
-    else {
-        n = B.desc->m;
-        assert(B.desc->n == k);
-    }
-    assert(C.desc->m == m && C.desc->n == n);
-    ia += 1; ja += 1; ib += 1; jb += 1; ic += 1; jc += 1;       // 1-indexing
+void multiply(const Matrix<float>& A, const Matrix<float>& B, Matrix<float>& C,
+        char transa, char transb, int m, int n, int k, float alpha, float beta,
+        int ia, int ja, int ib, int jb, int ic, int jc)
+{
+    if(m <= 0)
+        m = (transa == 'N') ? A.desc->m : A.desc->n;
+    if(n <= 0)
+        n = (transb == 'N') ? B.desc->n : B.desc->m;
+    if(k <= 0)
+        k = (transa == 'N') ? A.desc->n : A.desc->m;
+    assert(C.desc->m >= m && C.desc->n >= n);
+    ia += 1; ja += 1; ib += 1; jb += 1; ic += 1; jc += 1;       // Fortran indexing convention
     psgemm_(&transa, &transb, &m, &n, &k, &alpha, A.values, &ia, &ja, (int*) A.desc, B.values, &ib, &jb, (int*) B.desc, &beta, C.values, &ic, &jc, (int*) C.desc);
 }
 
-void multiply(const Matrix<double>& A, const Matrix<double>& B, Matrix<double>& C, char transa, char transb, double alpha, double beta, int ia, int ja, int ib, int jb, int ic, int jc) {
-    int m, n, k;
-    if(transa == 'N') {
-        m = A.desc->m;
-        k = A.desc->n;
-    }
-    else {
-        m = A.desc->n;
-        k = A.desc->m;
-    }
-    if(transb == 'N') {
-        n = B.desc->n;
-        assert(B.desc->m == k);
-    }
-    else {
-        n = B.desc->m;
-        assert(B.desc->n == k);
-    }
-    assert(C.desc->m == m && C.desc->n == n);
-    ia += 1; ja += 1; ib += 1; jb += 1; ic += 1; jc += 1;       // 1-indexing
+void multiply(const Matrix<double>& A, const Matrix<double>& B, Matrix<double>& C,
+        char transa, char transb, int m, int n, int k, double alpha, double beta,
+        int ia, int ja, int ib, int jb, int ic, int jc)
+{
+    if(m <= 0)
+        m = (transa == 'N') ? A.desc->m : A.desc->n;
+    if(n <= 0)
+        n = (transb == 'N') ? B.desc->n : B.desc->m;
+    if(k <= 0)
+        k = (transa == 'N') ? A.desc->n : A.desc->m;
+    assert(C.desc->m >= m && C.desc->n >= n);
+    ia += 1; ja += 1; ib += 1; jb += 1; ic += 1; jc += 1;       // Fortran indexing convention
     pdgemm_(&transa, &transb, &m, &n, &k, &alpha, A.values, &ia, &ja, (int*) A.desc, B.values, &ib, &jb, (int*) B.desc, &beta, C.values, &ic, &jc, (int*) C.desc);
 }
 
@@ -149,6 +133,18 @@ void redistribute(int m, int n, const Matrix<double>& A, int ia, int ja, Matrix<
               (double*) A.values, ia + 1, ja + 1, (int*) A.desc,
               B.values, ib + 1, jb + 1, (int*) B.desc, 
               gcontext.ictxt);
+}
+
+void gsum2d(const Context* context, const char* scope, const char* top,
+        int m, int n, float* a, int lda, int rdest, int cdest)
+{
+    Csgsum2d(context->ictxt, (char*) scope, (char*) top, m, n, (char*) a, lda, rdest, cdest);
+}
+
+void gsum2d(const Context* context, const char* scope, const char* top,
+        int m, int n, double* a, int lda, int rdest, int cdest)
+{
+    Cdgsum2d(context->ictxt, (char*) scope, (char*) top, m, n, (char*) a, lda, rdest, cdest);
 }
 
 } // namespace slp

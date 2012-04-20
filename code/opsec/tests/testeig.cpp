@@ -155,7 +155,7 @@ void TestPeig(CuTest* tc) {
 
     evals = (real*) opsec_malloc(nev*sizeof(real));
     evecs = (real*) opsec_malloc(nloc*ncv*sizeof(real));
-    nconv = peig(MPI_COMM_WORLD, n, nloc, nev, ncv, A, evals, evecs);
+    nconv = peig(n, nloc, nev, ncv, 1e-5, A, evals, evecs);
 
     if(myid == 0) {
         printf("Asked for %d eigenvalues, got %d\n", nev, nconv);

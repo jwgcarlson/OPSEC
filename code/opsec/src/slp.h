@@ -131,9 +131,15 @@ struct Matrix {
     T* values;
 
 public:
-    Matrix(const Descriptor* desc_, T* values_) : desc(desc_), values(values_) {
-        assert(desc != NULL);
+    Matrix() {
+        desc = NULL;
+        values = NULL;
     }
+
+    Matrix(const Descriptor* desc_, T* values_) : desc(desc_), values(values_) {
+        assert(desc != NULL && values != NULL);
+    }
+
     ~Matrix() {}
 
     /* Flat local accessors (for vectors or flattened matrices) */
@@ -183,14 +189,17 @@ public:
 #endif
 };
 
-/* Matrix-matrix multiplication */
+/* Matrix-matrix multiplication.  These are thin wrappers around psgemm() and
+ * pdgemm(). */
 void multiply(const Matrix<float>& A, const Matrix<float>& B, Matrix<float>& C,
               char transa = 'N', char transb = 'N',
-              float alpha = 1, float beta = 0,
+              int m = 0, int n = 0, int k = 0,
+              float alpha = 1.0f, float beta = 0.0f,
               int ia = 0, int ja = 0, int ib = 0, int jb = 0, int ic = 0, int jc = 0);
 void multiply(const Matrix<double>& A, const Matrix<double>& B, Matrix<double>& C,
               char transa = 'N', char transb = 'N',
-              double alpha = 1, double beta = 0,
+              int m = 0, int n = 0, int k = 0,
+              double alpha = 1.0, double beta = 0.0,
               int ia = 0, int ja = 0, int ib = 0, int jb = 0, int ic = 0, int jc = 0);
 
 /* Matrix redistribution */
@@ -201,6 +210,15 @@ void redistribute(int m, int n,
                   const Matrix<double>& A, int ia, int ja,
                   Matrix<double>& B, int ib, int jb,
                   const Context& gcontext);
+
+/* Element-wise summation */
+/* TODO: wrap this in a more intuitive interface? */
+void gsum2d(const Context* context, const char* scope, const char* top,
+            int m, int n, float* a, int lda,
+            int rdest = -1, int cdest = -1);
+void gsum2d(const Context* context, const char* scope, const char* top,
+            int m, int n, double* a, int lda,
+            int rdest = -1, int cdest = -1);
 
 
 

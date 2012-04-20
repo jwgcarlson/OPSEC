@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#  include <opsec_config.h>
+#endif
+
 #include <cassert>
 #include <cstring>
 
@@ -13,7 +17,7 @@ Grid::~Grid() {
     cleanup();
 }
 
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
 void Grid::initialize(MPI_Comm comm, int nx_, int ny_, int nz_) {
     nx = nx_;
     ny = ny_;
@@ -28,10 +32,10 @@ void Grid::initialize(int nx_, int ny_, int nz_) {
     nz = nz_;
     rfftwnd_plan plan = rfftw3d_create_plan(nx, ny, nz, FFTW_REAL_TO_COMPLEX, FFTW_ESTIMATE | FFTW_IN_PLACE);
     rfftwnd_plan iplan = rfftw3d_create_plan(nx, ny, nz, FFTW_COMPLEX_TO_REAL, FFTW_ESTIMATE | FFTW_IN_PLACE);
-    nxloc = nxloc_t = nx;
+    nxloc = nyloc_t = nx;
     ixmin = iymin_t = 0;
     local_size = nx * ny * 2*(nz/2+1);
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI
 
     /* Allocate extra storage so that each process can hold the boundary
      * layer from the adjacent process */
@@ -41,20 +45,20 @@ void Grid::initialize(int nx_, int ny_, int nz_) {
 }
 
 void Grid::cleanup() {
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
     rfftwnd_mpi_destroy_plan(fft_plan);
     rfftwnd_mpi_destroy_plan(ifft_plan);
 #else
     rfftwnd_destroy_plan(fft_plan);
     rfftwnd_destroy_plan(ifft_plan);
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI
     free(data);
     nx = ny = nz = nxloc = ixmin = nyloc_t = iymin_t = local_size = 0;
     data = NULL;
     fft_plan = ifft_plan = NULL;
 }
 
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
 void Grid::fft(bool transpose) {
     fftwnd_mpi_output_order order = transpose ? FFTW_TRANSPOSED_ORDER : FFTW_NORMAL_ORDER;
     rfftwnd_mpi(fft_plan, 1, data, NULL, order);
@@ -76,4 +80,4 @@ void Grid::fft(bool) {
 void Grid::ifft(bool) {
     rfftwnd_one_complex_to_real(ifft_plan, data, NULL);
 }
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI

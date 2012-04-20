@@ -76,7 +76,7 @@ clean() {
                 fi
                 ;;
             all)
-                clean cfitsio arpack trilinos gmock opsec
+                clean cfitsio arpack trilinos opsec
                 ;;
             *)
                 echo "clean.sh: invalid clean target: $1"

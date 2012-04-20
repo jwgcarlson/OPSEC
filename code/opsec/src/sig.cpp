@@ -8,6 +8,10 @@
 #  include <opsec_config.h>
 #endif
 
+#ifdef _OPENMP
+#  include <omp.h>
+#endif
+
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -28,6 +32,7 @@ using std::vector;
 #include "abn.h"
 #include "cfg.h"
 #include "cubature.h"
+#include "opsec.h"
 #include "rng.h"
 
 #ifndef SIGNAL_MAXEVAL
@@ -38,38 +43,45 @@ template<typename T> static inline T cb(T x) { return x*x*x; }
 template<typename T> static inline void swap(T& x, T& y) { T tmp = x; x = y; y = tmp; }
 
 /* Parameters:
- * n: size of global signal matrix
+ * Ncells: size of global signal matrix
  * rows: array of row indices for the requested block (need not be consecutive)
  * cols: array of column indices for the requested block (need not be consecutive)
- * s : array of length at least n*lld
- * lld : leading dimension of local block s
- * xi : 2-point correlation function
+ * s: array of length at least nrows*lld
+ * lld: leading dimension of local block s
+ * xi: 2-point correlation function
  * ... : ... */
 void ComputeSignalMatrixBlock(
-        int n, const vector<int>& rows, const vector<int>& cols,
+        int Ncells, const vector<int>& rows, const vector<int>& cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        int coordsys, const Cell* cells, int N1, int N2, int N3,
+        const Cell* cells, int N1, int N2, int N3,
         double epsrel, double epsabs)
 {
+    if(lld <= 0)
+        lld = (int) cols.size();
+    else if(lld < (int) cols.size()) {
+        opsec_error("ComputeSignalMatrixBlock: invalid array stride (%d,%zd,%zd)\n", lld, rows.size(), cols.size());
+        opsec_abort(1);
+    }
+    int coordsys = survey->GetCoordinateSystem();
     if(coordsys == CoordSysCartesian)
-        ComputeSignalMatrixBlockC(n, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+        ComputeSignalMatrixBlockC(Ncells, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
     else if(coordsys == CoordSysSpherical)
-        ComputeSignalMatrixBlockS(n, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+        ComputeSignalMatrixBlockS(Ncells, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
 }
 
 /* Parameters:
  * n: size of global signal matrix
- * nrows : number of rows in the requested block
- * rows : indices of requested rows (might not be consecutive)
- * ncols : number of columns in the requested block
- * cols : indices of requested columns (might not be consecutive)
- * s : array of length at least n*lld
- * lld : leading dimension of local block s
- * xi : 2-point correlation function
+ * nrows: number of rows in the requested block
+ * rows: indices of requested rows (might not be consecutive)
+ * ncols: number of columns in the requested block
+ * cols: indices of requested columns (might not be consecutive)
+ * s: array of length at least nrows*lld
+ * lld: leading dimension of local block s
+ * xi: 2-point correlation function
  * ... : ... */
 void ComputeSignalMatrixBlockC(
-        int n, int nrows, const int* rows, int ncols, const int* cols,
+        int Ncells, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
         const Cell* cells, int Nx, int Ny, int Nz,
@@ -109,13 +121,13 @@ void ComputeSignalMatrixBlockC(
                 cache[k] = Q;
             }
 
-            s[i + j*lld] = sqrt(cells[a].Nbar * cells[b].Nbar) * Q;
+            s[i*lld + j] = sqrt(cells[a].Nbar * cells[b].Nbar) * Q;
         }
     }
 }
 
 void ComputeSignalMatrixBlockS(
-        int n, int nrows, const int* rows, int ncols, const int* cols,
+        int Ncells, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
         const Cell* cells, int Nr, int Nmu, int Nphi,
@@ -125,7 +137,7 @@ void ComputeSignalMatrixBlockS(
 
     const real uninitialized = -1e100;  // arbitrary magic number
 
-    vector<int> rows_g2l(n, -1), cols_g2l(n, -1);
+    vector<int> rows_g2l(Ncells, -1), cols_g2l(Ncells, -1);
     for(int i = 0; i < nrows; i++)
         rows_g2l[rows[i]] = i;
     for(int j = 0; j < ncols; j++)
@@ -139,7 +151,7 @@ void ComputeSignalMatrixBlockS(
     /* Rearrange cells into a set of "arcs".  Each arc is a sequence of cells
      * at fixed r and mu, labeled by h = d*Nmu + e. */
     vector<vector<int> > arcs(Nr*Nmu);
-    for(int a = 0; a < n; a++) {
+    for(int a = 0; a < Ncells; a++) {
         int h = cells[a].G / Nphi;
         arcs[h].push_back(a);
     }
@@ -191,7 +203,7 @@ void ComputeSignalMatrixBlockS(
                         cache[k] = Q;
                     }
                     /* Set S_{ab} = \sqrt{\Nbar_a \Nbar_b} Q_{ab} */
-                    s[i + j*lld] = sqrt(cells[a].Nbar * cells[b].Nbar) * Q;
+                    s[i*lld + j] = sqrt(cells[a].Nbar * cells[b].Nbar) * Q;
                 }
             }
         }
@@ -200,7 +212,7 @@ void ComputeSignalMatrixBlockS(
     /* Sanity check: all local matrix elements should be set */
     for(int i = 0; i < nrows; i++)
         for(int j = 0; j < ncols; j++)
-            assert(s[i + j*lld] != uninitialized);
+            assert(s[i*lld + j] != uninitialized);
 }
 
 #if 0
@@ -327,7 +339,6 @@ real* ComputeSignalMatrixS(
                 cache[k] = uninitialized;
 
             /* For fixed (da,ea) and (db,eb), iterate over cell pairs */
-//            #pragma omp parallel for private(ia,ib,a,b,fa,fb,k,Q)
             for(ia = 0; ia < na; ia++) {
                 a = acells[ia];
                 if(a < amin || a > amax)
@@ -386,17 +397,20 @@ static void cartesian_integrand(unsigned ndim, unsigned npt, const double* x, vo
            xmax2 = data->max[3], ymax2 = data->max[4], zmax2 = data->max[5];
     const XiFunc& xi = data->xi;
     const SeparationFunc& sep = data->sep;
-    Point p1, p2;
-    #pragma omp parallel for private(p1,p2)
-    for(unsigned i = 0; i < npt; i++) {
-        const double* u = &x[6*i];
-        p1.x = (1 - u[0])*xmin1 + u[0]*xmax1;
-        p1.y = (1 - u[1])*ymin1 + u[1]*ymax1;
-        p1.z = (1 - u[2])*zmin1 + u[2]*zmax1;
-        p2.x = (1 - u[3])*xmin2 + u[3]*xmax2;
-        p2.y = (1 - u[4])*ymin2 + u[4]*ymax2;
-        p2.z = (1 - u[5])*zmin2 + u[5]*zmax2;
-        fval[i] = xi(p1, p2, sep);
+    #pragma omp parallel
+    {
+        Point p1, p2;
+        #pragma omp for
+        for(unsigned i = 0; i < npt; i++) {
+            const double* u = &x[6*i];
+            p1.x = (1 - u[0])*xmin1 + u[0]*xmax1;
+            p1.y = (1 - u[1])*ymin1 + u[1]*ymax1;
+            p1.z = (1 - u[2])*zmin1 + u[2]*zmax1;
+            p2.x = (1 - u[3])*xmin2 + u[3]*xmax2;
+            p2.y = (1 - u[4])*ymin2 + u[4]*ymax2;
+            p2.z = (1 - u[5])*zmin2 + u[5]*zmax2;
+            fval[i] = xi(p1, p2, sep);
+        }
     }
 }
 
@@ -425,23 +439,26 @@ static void spherical_integrand(unsigned ndim, unsigned npt, const double* x, vo
     assert(ndim == 6 && fdim == 1);
 #endif
     CubatureData* data = (CubatureData*) vdata;
-    double rmin1cb = data->min[0], mumin1 = data->min[1], phimin1 = data->min[2],
+    const double rmin1cb = data->min[0], mumin1 = data->min[1], phimin1 = data->min[2],
            rmin2cb = data->min[3], mumin2 = data->min[4], phimin2 = data->min[5];
-    double rmax1cb = data->max[0], mumax1 = data->max[1], phimax1 = data->max[2],
+    const double rmax1cb = data->max[0], mumax1 = data->max[1], phimax1 = data->max[2],
            rmax2cb = data->max[3], mumax2 = data->max[4], phimax2 = data->max[5];
     const XiFunc& xi = data->xi;
     const SeparationFunc& sep = data->sep;
-    Point p1, p2;
-    #pragma omp parallel for private(p1,p2)
-    for(unsigned i = 0; i < npt; i++) {
-        const double* u = &x[6*i];
-        p1.r = cbrt((1-u[0]) * rmin1cb +  u[0] * rmax1cb);
-        p2.r = cbrt((1-u[1]) * rmin2cb +  u[1] * rmax2cb);
-        p1.mu =     (1-u[2]) * mumin1  +  u[2] * mumax1;
-        p2.mu =     (1-u[3]) * mumin2  +  u[3] * mumax2;
-        p1.phi =    (1-u[4]) * phimin1 +  u[4] * phimax1;
-        p2.phi =    (1-u[5]) * phimin2 +  u[5] * phimax2;
-        fval[i] = xi(p1, p2, sep);
+    #pragma omp parallel
+    {
+        Point p1, p2;
+        #pragma omp for
+        for(unsigned i = 0; i < npt; i++) {
+            const double* u = &x[6*i];
+            p1.r = cbrt((1-u[0]) * rmin1cb +  u[0] * rmax1cb);
+            p2.r = cbrt((1-u[1]) * rmin2cb +  u[1] * rmax2cb);
+            p1.mu =     (1-u[2]) * mumin1  +  u[2] * mumax1;
+            p2.mu =     (1-u[3]) * mumin2  +  u[3] * mumax2;
+            p1.phi =    (1-u[4]) * phimin1 +  u[4] * phimax1;
+            p2.phi =    (1-u[5]) * phimin2 +  u[5] * phimax2;
+            fval[i] = xi(p1, p2, sep);
+        }
     }
 }
 
@@ -626,46 +643,17 @@ FILE* ReadModesHeader(const char* modefile, int* Nmodes_, int* Ncells_) {
     return fp;
 }
 
-#if 0
-real* ReadModes(const char* modefile, int* Nmodes_, int* Ncells_) {
-    int Nmodes = -1;
-    int Ncells = -1;
-    real* modes = NULL;
-
-    FILE* fp = ReadModesHeader(modefile, &Nmodes, &Ncells);
-    if(fp != NULL) {
-        modes = (real*) opsec_malloc(Nmodes*Ncells*sizeof(real));
-        if(modes == NULL)
-            fprintf(stderr, "ReadModes: could not allocate %zd bytes of memory\n", Nmodes*Ncells*sizeof(real));
-        else {
-            if(fread(modes, sizeof(real), Nmodes*Ncells, fp) != Nmodes*Ncells) {
-                fprintf(stderr, "ReadModes: error reading data from '%s'\n", modefile);
-                free(modes);
-                modes = NULL;
-            }
-        }
-        fclose(fp);
-    }
-
-    if(Nmodes_) *Nmodes_ = Nmodes;
-    if(Ncells_) *Ncells_ = Ncells;
-    return modes;
-}
-#endif
-
 real* ReadModes(const char* modefile, int* Nmodes_, int* Ncells_) {
     int Nmodes = -1;
     int Ncells = -1;
     real* modes = NULL;
     int nread;
 
-    int nprocs = 1, me = 0, usempi = 0;
+    int me = 0, usempi = 0;
 #ifdef OPSEC_USE_MPI
     MPI_Initialized(&usempi);
-    if(usempi) {
-        MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    if(usempi)
         MPI_Comm_rank(MPI_COMM_WORLD, &me);
-    }
 #endif
 
     /* Read in spectrum from file on the root process */

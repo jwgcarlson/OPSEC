@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -201,7 +202,7 @@ void ReadSymmetricMatrix(SplitFile& f, int n, real* ap) {
             opsec_abort(1);
         }
 #ifdef OPSEC_USE_MPI
-        /* Temporary storage for other process' elements */
+        /* Temporary storage for other process' elements (kloc[0] >= kloc[p] for all p >= 1) */
         real* tmp = (real*) opsec_malloc(kloc[0]*sizeof(real));
         for(int p = 1; p < nprocs; p++) {
             nread = f.read((char*) tmp, kloc[p]*sizeof(real));
@@ -251,7 +252,7 @@ int main(int argc, char* argv[]) {
     if(cfg_has_key(cfg, "mixing"))
         mixing = cfg_get(cfg, "mixing");
 
-    /* Load model, for prior parameter values */
+    /* Load model, to get prior parameter values */
     Model* model = InitializeModel(cfg);
     int Nparams = model->NumParams();
     std::vector<real> param(Nparams);
@@ -286,19 +287,17 @@ int main(int argc, char* argv[]) {
      * overall, corresponding to the matrix element D_{ij} with
      *   r = i*(i+1)/2 + j */
     real* dvalues = (real*) opsec_malloc(Nparams*mylocsize*sizeof(real));
+    /* Fill with -1 to detect errors more easily */
     for(int m = 0; m < Nparams; ++m)
         for(int k = 0; k < mylocsize; ++k)
             dvalues[m*mylocsize + k] = -1;
 
-    /* Residue matrix, symmetric, distributed among processes as above.
+    /* Residue matrix, symmetric, distributed over processes as above.
      * Initialized to zero. */
     real* rvalues = (real*) opsec_calloc(mylocsize, sizeof(real));
 
-    /* Fisher matrix F_{mn}, quadratic estimates q_n, and bias component f_n */
+    /* Fisher matrix F_{mn}, quadratic estimates q_n, and bias component f_n. */
     real* fvalues = (real*) opsec_calloc(Nparams*(Nparams+2), sizeof(real));
-
-    /* Mixing matrix M_{mn} */
-    real* mvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
 
     /* Starting and ending local indices for packed symmetric matrix */
     PackedMatrixIndex kbegin(Nmodes, mylocdisp);
@@ -335,10 +334,10 @@ int main(int argc, char* argv[]) {
     for(int m = 0; m < Nparams; m++)
         D[m] = MyVector<real>(mylocsize, &dvalues[m*mylocsize]);
 
-    /* Print C,m */
-    for(int m = 0; m < Nparams; m++)
-        for(PackedMatrixIndex k = kbegin; k < kend; ++k)
-            printf("Process %d: D[%d](%d,%d) = %g\n", me, m, k.i, k.j, D[m][k]);
+    /* Print $C,m$ */
+//    for(int m = 0; m < Nparams; m++)
+//        for(PackedMatrixIndex k = kbegin; k < kend; ++k)
+//            printf("Process %d: D[%d](%d,%d) = %g\n", me, m, k.i, k.j, D[m][k]);
 
     /* Read pixel values $y_i$ into yvalues */
     int Npixels;
@@ -365,7 +364,7 @@ int main(int argc, char* argv[]) {
             R[k] -= param[n] * D[n][k];     // R_{ij} -= p_n C_{ij,n}
     }
 
-    /* Invert covariance matrix (it's diagonal and positive definite, so no worries) */
+    /* Invert covariance matrix (it's diagonal and positive definite, so this is easy) */
     MyVector<real> Cinv(Nmodes, lvalues);
     for(int i = 0; i < Nmodes; i++)
         Cinv[i] = 1/C[i];
@@ -414,11 +413,13 @@ int main(int argc, char* argv[]) {
         q[n] = qn;
     }
 
+#ifdef OPSEC_USE_MPI
     /* Reduce all results to root process */
     if(me == 0)
         MPI_Reduce(MPI_IN_PLACE, fvalues, Nparams*(Nparams+2), REAL_MPI_TYPE, MPI_SUM, 0, MPI_COMM_WORLD);
     else
         MPI_Reduce(fvalues, NULL, Nparams*(Nparams+2), REAL_MPI_TYPE, MPI_SUM, 0, MPI_COMM_WORLD);
+#endif
 
     /* Free storage that is no longer needed */
     free(lvalues);
@@ -430,6 +431,7 @@ int main(int argc, char* argv[]) {
 
     /* Let the root process finish the rest */
     if(me == 0) {
+        /* Memory allocation for matrices $M$, $W$, etc. */
         real* mvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
         real* wvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
         real* tvalues = (real*) opsec_malloc(Nparams*Nparams*sizeof(real));
@@ -499,6 +501,9 @@ int main(int argc, char* argv[]) {
         fprintf(fest, "# - mixing matrix $M_{mn}$ (Nparams-by-Nparams matrix)\n");
         fprintf(fest, "# - quadratic combinations $q_n$ (vector of length Nparams)\n");
         fprintf(fest, "# - bias corrections $f_n$ (vector of length Nparams)\n");
+        time_t now;
+        time(&now);
+        fprintf(fest, "# Generated %s\n", ctime(&now));
 
         Config opts = cfg_new();
         cfg_set_int(opts, "Nparams", Nparams);
@@ -511,9 +516,9 @@ int main(int argc, char* argv[]) {
         abn_write(fest, &q[0], Nparams, REAL_FMT, NULL);
         abn_write(fest, &f[0], Nparams, REAL_FMT, NULL);
 
-        F.print();
-        W.print();
-        M.print();
+//        F.print();
+//        W.print();
+//        M.print();
 
         cfg_destroy(opts);
         fclose(fest);
@@ -524,6 +529,9 @@ int main(int argc, char* argv[]) {
         free(fvalues);
     }
 
+    /* Clean up and exit */
+#ifdef OPSEC_USE_MPI
     MPI_Finalize();
+#endif
     return 0;
 }

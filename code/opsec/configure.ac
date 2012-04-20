@@ -10,9 +10,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([opsec_config.h])
 AC_CONFIG_SRCDIR([src/cfg.h])
 
-# List of utility programs to build, depending on availability of libraries.
-UTILITIES="dm2abn makeradial realmock vagc2abn"
-
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
@@ -22,8 +19,11 @@ AC_F77_WRAPPERS
 AC_PROG_LIBTOOL
 
 # Check for Python.
+AS_IF([test -z "$PYTHON" -a -n "$OPSEC_PYTHON"],
+      [PYTHON=`which "$OPSEC_PYTHON"`]
+)
 AM_PATH_PYTHON([2.5], [], [AC_MSG_WARN([Python support disabled.])])
-AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != ":"])
+AM_CONDITIONAL([OPSEC_AM_HAVE_PYTHON], [test "$PYTHON" != ":"])
 
 # Checks for libraries.
 
@@ -40,6 +40,20 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([floor memmove memset pow sqrt strchr strdup strndup])
+
+# Debug build?
+AC_ARG_ENABLE([debug],
+              [--enable-debug   Turn on debugging],
+              [case "$enableval" in
+                   yes) debug=true ;;
+                   no)  debug=false ;;
+                   *) AC_MSG_ERROR([bad value $enableval for --enable-debug]) ;;
+               esac],
+              [debug=false])
+AS_IF([test x$debug = xtrue],
+      [AC_DEFINE([OPSEC_DEBUG], 1, [Define to enable debugging])]
+)
+AM_CONDITIONAL([OPSEC_AM_DEBUG], [test x$debug = xtrue])
 
 # Decide on precision: single or double.
 AC_ARG_WITH(
@@ -64,7 +78,7 @@ dnl *******************************************************************
 # OPSEC currently doesn't compile without MPI support, and it wouldn't be very
 # useful even if it did.  So let's stop pretending to be so flexible and just
 # assume that MPI is present.
-AC_DEFINE(OPSEC_USE_MPI,1,[Define if OPSEC should use MPI.])
+AC_DEFINE(OPSEC_USE_MPI, 1, [Define if OPSEC should use MPI.])
 
 # In an ideal world, we'd just use whatever MPI-compatible compilers are
 # available on our system.
@@ -188,15 +202,15 @@ AC_LANG_PUSH([Fortran 77])
 save_LIBS="$LIBS"
 LIBS="$ARPACK_LIBS $LAPACK_LIBS $BLAS_LIBS $FLIBS $LIBS"
 AC_LINK_IFELSE(AC_LANG_CALL([], [dseupd]),
-               [],
-               AC_MSG_ERROR([Could not link against ARPACK library. Try setting --with-arpack.])
+               [AC_DEFINE(HAVE_ARPACK, 1, [Define if ARPACK is available.])],
+               [AC_MSG_FAILURE([Could not link against ARPACK library. Try setting --with-arpack.])]
 )
 save_F77="$F77"
 F77="$MPIF77"
 LIBS="$PARPACK_LIBS $LIBS"
 AC_LINK_IFELSE(AC_LANG_CALL([], [pdseupd]),
-               [],
-               AC_MSG_ERROR([Could not link against PARPACK library. Try setting --with-parpack.])
+               [AC_DEFINE(HAVE_PARPACK, 1, [Define if PARPACK is available.])],
+               [AC_MSG_FAILURE([Could not link against PARPACK library. Try setting --with-parpack.])]
 )
 LIBS="$save_LIBS"
 F77="$save_F77"
@@ -242,7 +256,8 @@ AC_LINK_IFELSE(
         [[Teuchos::ParameterList pl;
           Anasazi::BasicSort<double> sort(pl);]]
     ),
-    [AC_MSG_RESULT(yes)],
+    [AC_MSG_RESULT(yes)
+     AC_DEFINE(HAVE_ANASAZI, 1, [Define if Anasazi is available.])],
     [AC_MSG_RESULT(no)
      AC_MSG_FAILURE([Could not link against Anasazi library. Try setting --with-anasazi-libs.])]
 )
@@ -261,6 +276,7 @@ dnl *******************************************************************
 AC_LANG_PUSH([C++])
 AC_CHECK_HEADER(CImg.h, cimg_ok=yes, cimg_ok=no)
 AC_LANG_POP([C++])
+AM_CONDITIONAL([OPSEC_AM_HAVE_CIMG], [test x$cimg_ok = xyes])
 
 
 dnl *******************************************************************
@@ -270,15 +286,10 @@ dnl *******************************************************************
 AC_CHECK_LIB(png, png_read_info,
     AC_CHECK_HEADER(png.h, png_ok=yes, png_ok=no),
     png_ok=no,
-    -lz)
-if test "$png_ok" = yes -a "$cimg_ok" = yes; then
-    LIBPNG="-lpng -lz"
-    UTILITIES="$UTILITIES hpx2img img2hpx"
-else
-    AC_MSG_WARN(*** hpx2img/img2hpx utilities will not be built ***)
-fi
-
-AC_SUBST(LIBPNG)
+    -lz
+)
+AM_CONDITIONAL([OPSEC_AM_HAVE_LIBPNG], [test x$png_ok = xyes])
+AC_SUBST(LIBPNG, ["-lpng -lz"])
 
 
 dnl *******************************************************************
@@ -297,14 +308,10 @@ AC_LINK_IFELSE(
     fftw2_ok=yes,
     fftw2_ok=no
 )
-if test "$fftw2_ok" = yes; then
-    UTILITIES="$UTILITIES gmock"
-else
-    AC_MSG_WARN(*** gmock utility will not be built (FFTW2 headers/libraries not found) ***)
-fi
 CC="save_CC"
 LIBS="$save_LIBS"
 
+AM_CONDITIONAL([OPSEC_AM_HAVE_FFTW2], [test x$fftw2_ok = xyes])
 AC_SUBST(FFTW2_LIBS)
 
 
@@ -317,6 +324,7 @@ AC_SUBST(UTILITIES)
 
 AC_CONFIG_FILES([Makefile
                  python/Makefile
+                 python/opsec-submit
                  src/Makefile
                  tests/Makefile
                  utils/Makefile])

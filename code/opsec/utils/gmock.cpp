@@ -40,14 +40,22 @@
  *   (Actually, if w is nonzero, the observer is placed at (x/w,y/w,z/w)).
  */
 
+#ifdef HAVE_CONFIG_H
+#  include <opsec_config.h>
+#endif
+
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <unistd.h>
-
 #include <vector>
 using std::vector;
+
+#ifdef OPSEC_USE_MPI
+#  include <mpi.h>
+#endif
 
 #include "abn.h"
 #include "cfg.h"
@@ -402,7 +410,7 @@ static inline double W(double kx, double ky, double kz) {
 }
 
 #if 0
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
 void ComputePowerSpectrum(MPI_Comm comm, vector<Galaxy> galaxies, Slab& slab, const char* filename) {
     int me, nprocs;
     MPI_Comm_size(comm, &nprocs);
@@ -571,13 +579,13 @@ void ComputePowerSpectrum(MPI_Comm comm, vector<Galaxy> galaxies, Slab& slab, co
         }
     }
 }
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI
 #endif // 0
 
 int main(int argc, char* argv[]) {
     int nprocs = 1, me = 0;     // MPI parameters (default is compatible with non-MPI build)
 
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
     /* Initialize MPI */
     MPI_Init(&argc, &argv);
     MPI_Comm comm = MPI_COMM_WORLD;
@@ -676,7 +684,7 @@ int main(int argc, char* argv[]) {
         printf("Preparing %d^3 grid\n", N);
 
     /* Allocate grids */
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
     rho.initialize(comm, N, N, N);
     vx.initialize(comm, N, N, N);
     vy.initialize(comm, N, N, N);
@@ -686,7 +694,7 @@ int main(int argc, char* argv[]) {
     vx.initialize(N, N, N);
     vy.initialize(N, N, N);
     vz.initialize(N, N, N);
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI
 
     /* Initialize histogram object on root process */
     Histogram* pkhist = NULL;
@@ -735,7 +743,7 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
     if(me == 0)
         MPI_Reduce(MPI_IN_PLACE, &numneg, 1, MPI_INT, MPI_SUM, 0, comm);
     else
@@ -750,6 +758,7 @@ int main(int argc, char* argv[]) {
     /* Use the extra memory allocated by Grid (nxloc+1 instead of nxloc) to
      * store the grid values from the adjacent process, process me+1.  At the
      * same time, we need to send our boundary grid values to process me-1. */
+#ifdef OPSEC_USE_MPI
     int dest = (nprocs+me-1) % nprocs;
     int source = (me+1) % nprocs;
     int count = N*2*(N/2+1);
@@ -762,6 +771,7 @@ int main(int argc, char* argv[]) {
                  &vy(nxloc,0,0), count, MPI_DOUBLE, source, 0, comm, MPI_STATUS_IGNORE);
     MPI_Sendrecv(&vz(0,0,0), count, MPI_DOUBLE, dest, 0,
                  &vz(nxloc,0,0), count, MPI_DOUBLE, source, 0, comm, MPI_STATUS_IGNORE);
+#endif
 
     if(me == 0)
         printf("Sampling galaxies from density field\n");
@@ -771,7 +781,7 @@ int main(int argc, char* argv[]) {
     int num = sample_galaxies(slab, observer, local_galaxies);
 
     /* Gather galaxies and write to file */
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
     /* Determine the total number of galaxies, as well as the maximum number
      * of galaxies owned by any single process */
     int totalnum = 0, maxnum = 0;
@@ -817,7 +827,7 @@ int main(int argc, char* argv[]) {
     cfg_set(opts, "coordsys", "cartesian");
     abn_write(fout, &local_galaxies[0], num, "4f", opts);
     cfg_destroy(opts);
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI
 
     /* Clean up */
     rho.cleanup();
@@ -827,7 +837,7 @@ int main(int argc, char* argv[]) {
     if(me == 0)
         fclose(fout);
     delete pkhist;
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
     MPI_Finalize();
 #endif
     return 0;

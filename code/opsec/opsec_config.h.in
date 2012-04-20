@@ -14,6 +14,12 @@
 /* Define if F77 and FC dummy `main' functions are identical. */
 #undef FC_DUMMY_MAIN_EQ_F77
 
+/* Define if Anasazi is available. */
+#undef HAVE_ANASAZI
+
+/* Define if ARPACK is available. */
+#undef HAVE_ARPACK
+
 /* Define if you have BLACS library. */
 #undef HAVE_BLACS
 
@@ -47,6 +53,9 @@
 
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
+
+/* Define if PARPACK is available. */
+#undef HAVE_PARPACK
 
 /* Define to 1 if you have the `pow' function. */
 #undef HAVE_POW
@@ -100,6 +109,9 @@
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
+
+/* Define to enable debugging */
+#undef OPSEC_DEBUG
 
 /* Use double precision floating point operations */
 #undef OPSEC_DOUBLE

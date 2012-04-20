@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -45,25 +46,19 @@
 #include <string>
 #include <vector>
 
-#include <AnasaziBasicEigenproblem.hpp>
-#include <AnasaziBasicSort.hpp>
-#include <AnasaziBlockKrylovSchurSolMgr.hpp>
-#include <Teuchos_ParameterList.hpp>
+#include <mpi.h>
 
-#ifdef OPSEC_USE_MPI
-#  include <mpi.h>
-#  include <Teuchos_RawMPITraits.hpp>
-#endif
-
+#include "AnasaziSolver.h"
 #include "Cell.h"
 #include "Model.h"
-#include "MyMultiVec.h"
-#include "MySignalMatrixOperator.h"
+#include "ParpackSolver.h"
 #include "SplitFile.h"
 #include "Survey.h"
+#include "XiFunc.h"
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
+#include "sig.h"
 #include "slp.h"
 
 const char* usage =
@@ -79,7 +74,36 @@ const char* usage =
     "  model=NAME     Use specified model (required)\n"
     "  coordsys=TYPE  Coordinate system; either spherical or cartesian (required)\n"
     "  Nr,Nmu,Nphi    Spherical grid (required if coordsys = spherical)\n"
-    "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n";
+    "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n"
+    "  solver=NAME    Use specified eigensolver (arpack or anasazi)\n"
+;
+
+class SignalMatrixFactory : public MatrixFactory {
+public:
+    SignalMatrixFactory(int Ncells, const XiFunc& xi, Survey* survey,
+                        const Cell* cells, int N1, int N2, int N3,
+                        double epsrel = 1e-5, double epsabs = 1e-10)
+        : Ncells(Ncells), xi(xi), survey(survey), cells(cells),
+          N1(N1), N2(N2), N3(N3), epsrel(epsrel), epsabs(epsabs)
+    {}
+
+    void ComputeMatrixValues(const std::vector<int>& rows,
+                             const std::vector<int>& cols,
+                             real* values, int lld)
+    {
+        ComputeSignalMatrixBlock(Ncells, rows, cols, values, lld, xi, survey,
+                                 cells, N1, N2, N3, epsrel, epsabs);
+    }
+
+private:
+    int Ncells;
+    const XiFunc& xi;
+    Survey* survey;
+    const Cell* cells;
+    int N1, N2, N3;
+    double epsrel, epsabs;
+};
+
 
 int main(int argc, char* argv[]) {
     /* Initialize MPI, if available */
@@ -129,9 +153,9 @@ int main(int argc, char* argv[]) {
     }
 
     const char* cellfile = cfg_get(cfg, "cellfile");
-    int Nmodes = cfg_get_int(cfg, "Nmodes");
     const char* modefile = cfg_get(cfg, "modefile");
     const char* evalfile = cfg_get(cfg, "evalfile");
+    int Nmodes = cfg_get_int(cfg, "Nmodes");
 
     /* Load model */
     Model* model = InitializeModel(cfg);
@@ -167,102 +191,51 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
 
     if(Nmodes > Ncells) {
-        if(me == 0) opsec_error("klt: requesting %d modes from a %d dimensional space\n", Nmodes, Ncells);
+        if(me == 0) opsec_error("klt: requesting %d modes from a %d-dimensional space\n", Nmodes, Ncells);
         opsec_exit(1);
     }
 
-    /* Number of eigenvalues to compute */
-    int nev = Nmodes;
+    /* Create matrix factory */
+    double epsrel = cfg_has_key(cfg, "sig.epsrel") ? cfg_get_double(cfg, "sig.epsrel") : 1e-5;
+    double epsabs = cfg_has_key(cfg, "sig.epsabs") ? cfg_get_double(cfg, "sig.epsabs") : 1e-10;
+    SignalMatrixFactory matfact(Ncells, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
 
-    /* Block size to use for block Krylov-Schur method */
-    int block_size = 1;
-
-    /* Number of blocks to use */
-    int num_blocks = std::min(2*nev/block_size, Ncells);
-
-    /* Convergence tolerance */
-    double tol = 1e-5;
-
-    /* Maximum number of restarts */
-    int max_restarts = 1000;
-
-    /* Which eigenvalues to solve for (LM = largest magnitude) */
-    std::string which = "LM";
-
-    /* Verbosity level */
-    int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary
-                  + Anasazi::TimingDetails + Anasazi::StatusTestDetails;
-
-    /* Construct parameter list for Eigensolver */
-    Teuchos::ParameterList params;
-    params.set("Verbosity", verbosity);
-    params.set("Block Size", block_size);
-    params.set("Num Blocks", num_blocks);
-    params.set("Maximum Restarts", max_restarts);
-    params.set("Convergence Tolerance", tol);
-    params.set("Which", which);
-
-    typedef real ST;
-    typedef Anasazi::MultiVec<ST> MV;
-    typedef Anasazi::Operator<ST> OP;
-    typedef Anasazi::MultiVecTraits<ST,MV> MVT;
-    typedef Anasazi::OperatorTraits<ST,MV,OP> OPT;
-
-    /* Construct initial vector */
-    Teuchos::RCP<MyMultiVec<real> > ivec = Teuchos::rcp(new MyMultiVec<real>(Ncells, block_size));
-    ivec->MvRandom();
-
-    if(me == 0)
-        opsec_info("Defining signal matrix operator...\n");
-
-    /* Construct operator */
-    Teuchos::RCP<MySignalMatrixOperator<real> > op
-        = Teuchos::rcp(new MySignalMatrixOperator<real>(coordsys, N1, N2, N3, Ncells, cells, xi, survey));
-
-    if(me == 0)
-        opsec_info("Initializing eigenproblem...\n");
-
-    /* Create the eigenproblem */
-    Teuchos::RCP<Anasazi::BasicEigenproblem<ST, MV, OP> > problem =
-        Teuchos::rcp(new Anasazi::BasicEigenproblem<ST, MV, OP>(op, ivec));
-    problem->setHermitian(true);
-    problem->setNEV(nev);
-    bool problem_okay = problem->setProblem();
-    if(!problem_okay && me == 0) {
-        opsec_error("klt: error setting eigenproblem\n");
-        opsec_abort(1);
-    }
-
-    if(me == 0)
-        opsec_info("Initializing eigensolver...\n");
-
-    /* Initialize the block-Arnoldi solver */
-    Anasazi::BlockKrylovSchurSolMgr<ST,MV,OP> solmgr(problem, params);
-
-    if(me == 0)
-        opsec_info("Solving eigenproblem...\n");
-
-    /* Solve the problem to the specified tolerances or length */
-    Anasazi::ReturnType retcode = solmgr.solve();
-    if(retcode != Anasazi::Converged && me == 0) {
-        opsec_error("klt: SolverManager failed to converge\n");
-    }
-
-    if(me == 0)
-        opsec_info("Reading solution...\n");
-
-    /* Get the eigenvalues and eigenvectors from the eigenproblem */
-    Anasazi::Eigensolution<ST,MV> sol = problem->getSolution();
-    std::vector<Anasazi::Value<ST> > evals = sol.Evals;
-    Teuchos::RCP<MV> mvevecs = sol.Evecs;
-    MyMultiVec<ST>* evecs = dynamic_cast<MyMultiVec<ST>*>(mvevecs.get());
-    std::vector<int> index = sol.index;
-    int nconv = sol.numVecs;
-
-    if(nconv < nev) {
+    /* Select eigensolver */
+    Solver* solver = NULL;
+    std::string s = cfg_get(cfg, "solver");
+    if(s == "parpack") {
+#ifdef HAVE_PARPACK
+        /* TODO: parse klt.parpack.* options and pass to solver */
+        solver = new ParpackSolver(Ncells, matfact);
+#else
         if(me == 0)
-            opsec_error("klt: not all eigenvalues converged: nev = %d, nconv = %d\n", nev, nconv);
-        nev = nconv;
+            opsec_error("klt: no support for PARPACK solver, try recompiling OPSEC\n");
+        opsec_exit(1);
+#endif
+    }
+    else if(s == "anasazi") {
+#ifdef HAVE_ANASAZI
+        /* TODO: parse klt.anasazi.* options and pass to solver */
+        solver = new AnasaziSolver(Ncells, matfact);
+#else
+        if(me == 0)
+            opsec_error("klt: no support for Anasazi solver, try recompiling OPSEC\n");
+        opsec_exit(1);
+#endif
+    }
+    else {
+        if(me == 0)
+            opsec_error("klt: unrecognized solver: %s\n", s.c_str());
+        opsec_exit(1);
+    }
+
+    /* Solve for Nmodes eigenvalue/eigenvectors */
+    int nconv = solver->Solve(Nmodes);
+
+    /* Check for errors */
+    if(nconv < Nmodes) {
+        if(me == 0)
+            opsec_error("klt: not all eigenvalues converged: Nmodes = %d, nconv = %d\n", Nmodes, nconv);
     }
 
     /* Prepare headers in output files */
@@ -273,46 +246,43 @@ int main(int argc, char* argv[]) {
         cfg_set(opts, "cellfile", cellfile);
         cfg_set_int(opts, "Ncells", Ncells);
         cfg_set_int(opts, "Nmodes", Nmodes);
+        cfg_set_int(opts, "nconv", nconv);
 
         /* Write evalfile header */
         fprintf(feval, "# Signal matrix eigenvalues\n");
-        abn_write_header(feval, nev, REAL_FMT, opts);
+        abn_write_header(feval, nconv, REAL_FMT, opts);
 
         /* Write modefile header */
         fprintf(fmode, "# Signal matrix eigenmodes\n");
         fprintf(fmode, "# Each mode is stored consecutively, as below:\n");
         fprintf(fmode, "#   v_1,1   v_1,2   ... v_1,n\n");
         fprintf(fmode, "#   ...\n");
-        fprintf(fmode, "#   v_nev,1 v_nev,2 ... v_nev,n\n");
-        abn_write_header(fmode, nev*Ncells, REAL_FMT, opts);
+        fprintf(fmode, "#   v_m,1   v_m,2   ... v_m,n\n");
+        abn_write_header(fmode, nconv*Ncells, REAL_FMT, opts);
 
         cfg_destroy(opts);
     }
 
-    std::vector<real> v;        // memory for a full eigenvector on root process
+    /* Create Ncells-by-1 vector r on root process, representing a single eigenvector */
+    const slp::Context* pcontext = solver->GetContext();
+    slp::Descriptor* rdesc = pcontext->new_descriptor(Ncells, 1, Ncells, 1);
+    real* rvalues = (real*) opsec_malloc(rdesc->local_size() * sizeof(real));
+    slp::Matrix<real> r(rdesc, &rvalues[0]);
     if(me == 0)
-        v.resize(Ncells);
+        assert(rdesc->num_local_rows() == Ncells);
+    else
+        assert(rdesc->num_local_rows() == 0);
 
-    /* Determine the local problem length and offset for each process */
-    std::vector<int> locsizes(nprocs), locdisps(nprocs);
-    for(int p = 0; p < nprocs; p++) {
-        locsizes[p] = (Ncells/nprocs) + (p < (Ncells % nprocs));
-        locdisps[p] = p*(Ncells/nprocs) + std::min(p, Ncells % nprocs);
-    }
+    /* Gather eigenvectors to root process and write to file */
+    for(int j = 0; j < nconv; j++) {
+        real lambda = solver->GetEigenvalue(j);
+        slp::Matrix<real> x = solver->GetEigenvector(j);
 
-    for(int j = 0; j < nev; j++) {
-        real* vloc = evecs->vector(j);
+        slp::redistribute(Ncells, 1, x, 0, 0, r, 0, 0);
 
-#ifdef OPSEC_USE_MPI
-        MPI_Gatherv(vloc, locsizes[me], REAL_MPI_TYPE,
-                    &v[0], &locsizes[0], &locdisps[0], REAL_MPI_TYPE,
-                    0, MPI_COMM_WORLD);
-#else
-        memcpy(&v[0], vloc, Ncells*sizeof(real));
-#endif
         if(me == 0) {
-            feval.write((char*) &evals[j], sizeof(real));
-            fmode.write((char*) &v[0], Ncells*sizeof(real));
+            feval.write((char*) &lambda, sizeof(real));
+            fmode.write((char*) rvalues, Ncells*sizeof(real));
         }
     }
 
@@ -321,13 +291,14 @@ int main(int argc, char* argv[]) {
         feval.close();
         fmode.close();
     }
-    free(cells);
+    free(rvalues);
+    delete rdesc;
+    delete solver;
     delete model;
+    free(cells);
     delete survey;
     cfg_destroy(cfg);
-#ifdef OPSEC_USE_MPI
     MPI_Finalize();
-#endif
 
     return 0;
 }

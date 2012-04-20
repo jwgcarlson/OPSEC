@@ -11,16 +11,21 @@ class SeparationFunc;
 class Survey;
 class XiFunc;
 
-/* Compute a block of the n-by-n signal matrix. */
+/* Compute an nrows-by-ncols block of the Ncells-by-Ncells signal matrix, where
+ *   nrows = rows.size(),  ncols = cols.size().
+ * The matrix elements are stored in row-major format with stride lld, i.e.
+ *    S_{ij} = s[i*lld + j]   for   0 <= i < nrows, 0 <= j < ncols.
+ * If lld <= 0 then tight packing is assumed, and lld is set to ncols.  The
+ * array s should be large enough to hold at least nrows*lld elements. */
 void ComputeSignalMatrixBlock(
-        int n, const std::vector<int>& rows, const std::vector<int>& cols,
+        int Ncells, const std::vector<int>& rows, const std::vector<int>& cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        int coordsys, const Cell* cells, int N1, int N2, int N3,
+        const Cell* cells, int N1, int N2, int N3,
         double epsrel = 1e-5, double epsabs = 1e-10);
 
 void ComputeSignalMatrixBlockC(
-        int n, int nrows, const int* rows, int ncols, const int* cols,
+        int Ncells, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
         const Cell* cells, int Nx, int Ny, int Nz,

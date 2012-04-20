@@ -54,6 +54,7 @@ fi
 
 build() {
     while [ -n "$1" ]; do
+        cd $CODE
         case $1 in
             cfitsio*)
                 source $CODE/scripts/cfitsio.sh
@@ -84,10 +85,10 @@ build() {
             opsec*)
                 cd $CODE/opsec
                 echo "Building all in $PWD"
-                ./configure --prefix=$PREFIX --disable-openmp && make && make install || die
+                ./configure --prefix=$PREFIX && make && make install || die
                 ;;
             all)
-                build cfitsio arpack trilinos gmock opsec
+                build cfitsio arpack trilinos opsec
                 ;;
             *)
                 echo "build.sh: invalid build target: $1"

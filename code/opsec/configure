@@ -748,7 +748,13 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 UTILITIES
 FFTW2_LIBS
+OPSEC_AM_HAVE_FFTW2_FALSE
+OPSEC_AM_HAVE_FFTW2_TRUE
 LIBPNG
+OPSEC_AM_HAVE_LIBPNG_FALSE
+OPSEC_AM_HAVE_LIBPNG_TRUE
+OPSEC_AM_HAVE_CIMG_FALSE
+OPSEC_AM_HAVE_CIMG_TRUE
 ANASAZI_LIBS
 ANASAZI_CPPFLAGS
 PARPACK_LIBS
@@ -765,10 +771,12 @@ MPIF77
 MPICXX
 MPILIBS
 MPICC
+OPSEC_AM_DEBUG_FALSE
+OPSEC_AM_DEBUG_TRUE
 POW_LIB
 LIBOBJS
-HAVE_PYTHON_FALSE
-HAVE_PYTHON_TRUE
+OPSEC_AM_HAVE_PYTHON_FALSE
+OPSEC_AM_HAVE_PYTHON_TRUE
 pkgpyexecdir
 pyexecdir
 pkgpythondir
@@ -908,6 +916,7 @@ enable_fast_install
 enable_dependency_tracking
 with_gnu_ld
 enable_libtool_lock
+enable_debug
 with_precision
 enable_openmp
 with_blas
@@ -1569,6 +1578,7 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --disable-libtool-lock  avoid locking (might break parallel builds)
+--enable-debug   Turn on debugging
   --disable-openmp        do not use OpenMP
 
 Optional Packages:
@@ -5057,13 +5067,13 @@ if test "${lt_cv_nm_interface+set}" = set; then :
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:5060: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:5070: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5063: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:5073: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5066: output\"" >&5)
+  (eval echo "\"\$as_me:5076: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -6269,7 +6279,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6272 "configure"' > conftest.$ac_ext
+  echo '#line 6282 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7797,11 +7807,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7800: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7810: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7804: \$? = $ac_status" >&5
+   echo "$as_me:7814: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8136,11 +8146,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8139: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8149: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8143: \$? = $ac_status" >&5
+   echo "$as_me:8153: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8241,11 +8251,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8244: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8254: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8248: \$? = $ac_status" >&5
+   echo "$as_me:8258: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8296,11 +8306,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8299: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8309: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8303: \$? = $ac_status" >&5
+   echo "$as_me:8313: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -10680,7 +10690,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 10683 "configure"
+#line 10693 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10776,7 +10786,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 10779 "configure"
+#line 10789 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11007,9 +11017,6 @@ CC="$lt_save_CC"
 ac_config_headers="$ac_config_headers opsec_config.h"
 
 
-
-# List of utility programs to build, depending on availability of libraries.
-UTILITIES="dm2abn makeradial realmock vagc2abn"
 
 # Checks for programs.
 ac_ext=c
@@ -14338,11 +14345,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14341: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14348: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14345: \$? = $ac_status" >&5
+   echo "$as_me:14352: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14437,11 +14444,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14440: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14447: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14444: \$? = $ac_status" >&5
+   echo "$as_me:14451: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14489,11 +14496,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14492: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14499: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14496: \$? = $ac_status" >&5
+   echo "$as_me:14503: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16312,11 +16319,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16315: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16322: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16319: \$? = $ac_status" >&5
+   echo "$as_me:16326: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16411,11 +16418,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16414: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16421: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:16418: \$? = $ac_status" >&5
+   echo "$as_me:16425: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16463,11 +16470,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16466: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16473: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:16470: \$? = $ac_status" >&5
+   echo "$as_me:16477: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -18994,6 +19001,10 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # Check for Python.
+if test -z "$PYTHON" -a -n "$OPSEC_PYTHON"; then :
+  PYTHON=`which "$OPSEC_PYTHON"`
+
+fi
 
 
 
@@ -19222,11 +19233,11 @@ $as_echo "$am_cv_python_pyexecdir" >&6; }
 
 
  if test "$PYTHON" != ":"; then
-  HAVE_PYTHON_TRUE=
-  HAVE_PYTHON_FALSE='#'
+  OPSEC_AM_HAVE_PYTHON_TRUE=
+  OPSEC_AM_HAVE_PYTHON_FALSE='#'
 else
-  HAVE_PYTHON_TRUE='#'
-  HAVE_PYTHON_FALSE=
+  OPSEC_AM_HAVE_PYTHON_TRUE='#'
+  OPSEC_AM_HAVE_PYTHON_FALSE=
 fi
 
 
@@ -19703,6 +19714,33 @@ _ACEOF
 
 fi
 done
+
+
+# Debug build?
+# Check whether --enable-debug was given.
+if test "${enable_debug+set}" = set; then :
+  enableval=$enable_debug; case "$enableval" in
+                   yes) debug=true ;;
+                   no)  debug=false ;;
+                   *) as_fn_error $? "bad value $enableval for --enable-debug" "$LINENO" 5  ;;
+               esac
+else
+  debug=false
+fi
+
+if test x$debug = xtrue; then :
+
+$as_echo "#define OPSEC_DEBUG 1" >>confdefs.h
+
+
+fi
+ if test x$debug = xtrue; then
+  OPSEC_AM_DEBUG_TRUE=
+  OPSEC_AM_DEBUG_FALSE='#'
+else
+  OPSEC_AM_DEBUG_TRUE='#'
+  OPSEC_AM_DEBUG_FALSE=
+fi
 
 
 # Decide on precision: single or double.
@@ -21768,13 +21806,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 acx_blacs_save_LIBS="$LIBS"
 LIBS="$LAPACK_LIBS $BLAS_LIBS $LIBS $FLIBS"
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: blacs.m4: BLACS_LIBS = $BLACS_LIBS" >&5
-$as_echo "$as_me: blacs.m4: BLACS_LIBS = $BLACS_LIBS" >&6;}
 # First, check BLACS_LIBS environment variable
 if test $acx_blacs_ok = no; then
     if test "x$BLACS_LIBS" != x; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: blacs.m4: yep, BLACS_LIBS = $BLACS_LIBS" >&5
-$as_echo "$as_me: blacs.m4: yep, BLACS_LIBS = $BLACS_LIBS" >&6;}
         save_LIBS="$LIBS"; LIBS="$BLACS_LIBS $LIBS"
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $blacs_pinfo in $BLACS_LIBS" >&5
 $as_echo_n "checking for $blacs_pinfo in $BLACS_LIBS... " >&6; }
@@ -22189,8 +22223,13 @@ cat > conftest.$ac_ext <<_ACEOF
 _ACEOF
 if ac_fn_f77_try_link "$LINENO"; then :
 
+$as_echo "#define HAVE_ARPACK 1" >>confdefs.h
+
 else
-  as_fn_error $? "Could not link against ARPACK library. Try setting --with-arpack." "$LINENO" 5
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "Could not link against ARPACK library. Try setting --with-arpack.
+See \`config.log' for more details" "$LINENO" 5 ; }
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -22205,8 +22244,13 @@ cat > conftest.$ac_ext <<_ACEOF
 _ACEOF
 if ac_fn_f77_try_link "$LINENO"; then :
 
+$as_echo "#define HAVE_PARPACK 1" >>confdefs.h
+
 else
-  as_fn_error $? "Could not link against PARPACK library. Try setting --with-parpack." "$LINENO" 5
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "Could not link against PARPACK library. Try setting --with-parpack.
+See \`config.log' for more details" "$LINENO" 5 ; }
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -22295,6 +22339,9 @@ _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_ANASAZI 1" >>confdefs.h
+
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -22341,6 +22388,14 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+ if test x$cimg_ok = xyes; then
+  OPSEC_AM_HAVE_CIMG_TRUE=
+  OPSEC_AM_HAVE_CIMG_FALSE='#'
+else
+  OPSEC_AM_HAVE_CIMG_TRUE='#'
+  OPSEC_AM_HAVE_CIMG_FALSE=
+fi
+
 
 
 
@@ -22350,7 +22405,8 @@ if test "${ac_cv_lib_png_png_read_info+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpng -lz $LIBS"
+LIBS="-lpng -lz
+ $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -22401,14 +22457,15 @@ else
   png_ok=no
 fi
 
-if test "$png_ok" = yes -a "$cimg_ok" = yes; then
-    LIBPNG="-lpng -lz"
-    UTILITIES="$UTILITIES hpx2img img2hpx"
+ if test x$png_ok = xyes; then
+  OPSEC_AM_HAVE_LIBPNG_TRUE=
+  OPSEC_AM_HAVE_LIBPNG_FALSE='#'
 else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: *** hpx2img/img2hpx utilities will not be built ***" >&5
-$as_echo "$as_me: WARNING: *** hpx2img/img2hpx utilities will not be built ***" >&2;}
+  OPSEC_AM_HAVE_LIBPNG_TRUE='#'
+  OPSEC_AM_HAVE_LIBPNG_FALSE=
 fi
 
+LIBPNG="-lpng -lz"
 
 
 
@@ -22446,14 +22503,16 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-if test "$fftw2_ok" = yes; then
-    UTILITIES="$UTILITIES gmock"
-else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: *** gmock utility will not be built (FFTW2 headers/libraries not found) ***" >&5
-$as_echo "$as_me: WARNING: *** gmock utility will not be built (FFTW2 headers/libraries not found) ***" >&2;}
-fi
 CC="save_CC"
 LIBS="$save_LIBS"
+
+ if test x$fftw2_ok = xyes; then
+  OPSEC_AM_HAVE_FFTW2_TRUE=
+  OPSEC_AM_HAVE_FFTW2_FALSE='#'
+else
+  OPSEC_AM_HAVE_FFTW2_TRUE='#'
+  OPSEC_AM_HAVE_FFTW2_FALSE=
+fi
 
 
 
@@ -22463,7 +22522,7 @@ CPPFLAGS="$CPPFLAGS $ANASAZI_CPPFLAGS $FITSIO_CPPFLAGS"
 
 
 
-ac_config_files="$ac_config_files Makefile python/Makefile src/Makefile tests/Makefile utils/Makefile"
+ac_config_files="$ac_config_files Makefile python/Makefile python/opsec-submit src/Makefile tests/Makefile utils/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -22595,8 +22654,24 @@ if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_PYTHON_TRUE}" && test -z "${HAVE_PYTHON_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_PYTHON\" was never defined.
+if test -z "${OPSEC_AM_HAVE_PYTHON_TRUE}" && test -z "${OPSEC_AM_HAVE_PYTHON_FALSE}"; then
+  as_fn_error $? "conditional \"OPSEC_AM_HAVE_PYTHON\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OPSEC_AM_DEBUG_TRUE}" && test -z "${OPSEC_AM_DEBUG_FALSE}"; then
+  as_fn_error $? "conditional \"OPSEC_AM_DEBUG\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OPSEC_AM_HAVE_CIMG_TRUE}" && test -z "${OPSEC_AM_HAVE_CIMG_FALSE}"; then
+  as_fn_error $? "conditional \"OPSEC_AM_HAVE_CIMG\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OPSEC_AM_HAVE_LIBPNG_TRUE}" && test -z "${OPSEC_AM_HAVE_LIBPNG_FALSE}"; then
+  as_fn_error $? "conditional \"OPSEC_AM_HAVE_LIBPNG\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OPSEC_AM_HAVE_FFTW2_TRUE}" && test -z "${OPSEC_AM_HAVE_FFTW2_FALSE}"; then
+  as_fn_error $? "conditional \"OPSEC_AM_HAVE_FFTW2\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
@@ -23642,6 +23717,7 @@ do
     "opsec_config.h") CONFIG_HEADERS="$CONFIG_HEADERS opsec_config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "python/Makefile") CONFIG_FILES="$CONFIG_FILES python/Makefile" ;;
+    "python/opsec-submit") CONFIG_FILES="$CONFIG_FILES python/opsec-submit" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
     "utils/Makefile") CONFIG_FILES="$CONFIG_FILES utils/Makefile" ;;

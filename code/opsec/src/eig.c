@@ -130,14 +130,14 @@ int eig(int n, int nev, int ncv, real *A, real *evals, real *evecs) {
 #ifdef OPSEC_USE_MPI
 
 /* Parallel eigenvalue routine.  Uses MPI and PARPACK. */
-int peig(MPI_Comm comm, int n, int nloc, int nev, int ncv, real *A, real *evals, real *evecs) {
+int peig(int n, int nloc, int nev, int ncv, real tol, real *A, real *evals, real *evecs) {
     MPI_Fint fcomm;
     int myid, nprocs;
     int *locsizes, *locdisps;
     int iparam[11], ipntr[11], ierr;
     real *workl, *workd, *resid, *xfull;
     int ido, lworkl, info;
-    real tol, sigma;
+    real sigma;
     real *x, *y;
     char bmat[] = "I";
     char which[] = "LA";
@@ -147,7 +147,6 @@ int peig(MPI_Comm comm, int n, int nloc, int nev, int ncv, real *A, real *evals,
     int p, itr;
 
     /* Set PARPACK parameters */
-    tol = 1e-5;
     iparam[0] = 1;      // ishfts
     iparam[2] = 1000;   // maxitr
     iparam[6] = 1;      // mode
@@ -159,14 +158,14 @@ int peig(MPI_Comm comm, int n, int nloc, int nev, int ncv, real *A, real *evals,
     select = (int*) opsec_calloc(ncv, sizeof(int));
 
     /* Get MPI info */
-    fcomm = MPI_Comm_c2f(comm);
-    MPI_Comm_rank(comm, &myid);
-    MPI_Comm_size(comm, &nprocs);
+    fcomm = MPI_Comm_c2f(MPI_COMM_WORLD);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
     /* Determine local problem lengths, by gathering nloc from each process */
     locsizes = (int*) opsec_malloc(nprocs*sizeof(int));
     locdisps = (int*) opsec_malloc(nprocs*sizeof(int));
-    MPI_Allgather(&nloc, 1, MPI_INT, locsizes, 1, MPI_INT, comm);
+    MPI_Allgather(&nloc, 1, MPI_INT, locsizes, 1, MPI_INT, MPI_COMM_WORLD);
     for(p = 0; p < nprocs; p++)
         locdisps[p] = (p == 0) ? 0 : locdisps[p-1] + locsizes[p-1];
     assert(locdisps[nprocs-1] + locsizes[nprocs-1] == n);
@@ -199,7 +198,7 @@ int peig(MPI_Comm comm, int n, int nloc, int nev, int ncv, real *A, real *evals,
 //                fflush(stdout);
 //            }
 
-            MPI_Allgatherv(x, nloc, REAL_MPI_TYPE, xfull, locsizes, locdisps, REAL_MPI_TYPE, comm);
+            MPI_Allgatherv(x, nloc, REAL_MPI_TYPE, xfull, locsizes, locdisps, REAL_MPI_TYPE, MPI_COMM_WORLD);
             blas_gemv(&trans, &n, &nloc, &alpha, A, &n, xfull, &incx, &beta, y, &incy);
         }
     }
@@ -251,13 +250,13 @@ int peig(MPI_Comm comm, int n, int nloc, int nev, int ncv, real *A, real *evals,
             static real alpha = 1.0;
             static real beta = 0.0;
             real a = -evals[i];
-            ierr = MPI_Allgatherv(&evecs[i*nloc], nloc, REAL_MPI_TYPE, xfull, locsizes, locdisps, REAL_MPI_TYPE, comm);
+            ierr = MPI_Allgatherv(&evecs[i*nloc], nloc, REAL_MPI_TYPE, xfull, locsizes, locdisps, REAL_MPI_TYPE, MPI_COMM_WORLD);
             blas_gemv(&trans, &n, &nloc, &alpha, A, &n, xfull, &incx, &beta, y, &incy);
             blas_axpy(&nloc, &a, &evecs[i*nloc], &incx, y, &incy);
             real d = parpack_pnorm2(&fcomm, &nloc, y, &incy);
             if(myid == 0)
                 printf("Eigenvalue %d: lambda = %16.16f, |A*x - lambda*x| = %16.16f\n", iparam[4]-i, evals[i], d);
-            ierr = MPI_Allgatherv(y, nloc, REAL_MPI_TYPE, xfull, locsizes, locdisps, REAL_MPI_TYPE, comm);
+            ierr = MPI_Allgatherv(y, nloc, REAL_MPI_TYPE, xfull, locsizes, locdisps, REAL_MPI_TYPE, MPI_COMM_WORLD);
         }
         free(y);
     }

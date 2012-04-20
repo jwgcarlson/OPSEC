@@ -4,7 +4,7 @@
 #include <cassert>
 #include <rfftw.h>
 
-#ifdef HAVE_MPI
+#ifdef OPSEC_USE_MPI
 /* MPI Grid, distributed as slabs among processes */
 
 #include <rfftw_mpi.h>
@@ -91,6 +91,6 @@ struct Grid {
     }
 };
 
-#endif // HAVE_MPI
+#endif // OPSEC_USE_MPI
 
 #endif // GRID_H

@@ -94,7 +94,7 @@ void TestMatrixInverse(CuTest* tc) {
 
     MyMatrix<double> A(3, 3, avalues);
     MyMatrix<double> B(3, 3, bvalues);
-    inv(A, B);
+    inverse(A, B);
 
 #define CK(i, j, ex) CuAssertDblEquals(tc, ex, B(i-1,j-1), 1e-10);
     CK(1,1, 2.)  CK(1,2, -17.) CK(1,3, 11.)
@@ -105,19 +105,19 @@ void TestMatrixInverse(CuTest* tc) {
 
 void TestPackedMatrixIndex(CuTest* tc) {
     int n = 5;
-    PackedMatrixIndex gr = 0;
+    PackedMatrixIndex k(n);
     int i = 0;
     int j = 0;
     for(int r = 0; r < n*(n+1)/2; ++r) {
-//        printf("ap[%d] = A(%d,%d)\n", r, gr.i, gr.j);
-        CuAssertIntEquals(tc, i, gr.i);
-        CuAssertIntEquals(tc, j, gr.j);
+//        printf("ap[%d] = A(%d,%d)\n", r, k.i, k.j);
+        CuAssertIntEquals(tc, i, k.i);
+        CuAssertIntEquals(tc, j, k.j);
         ++j;
         if(j > i) {
             ++i;
             j = 0;
         }
-        ++gr;
+        ++k;
     }
 }
 

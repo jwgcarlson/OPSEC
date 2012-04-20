@@ -6,16 +6,18 @@ F77 = $(MPIF77)
 noinst_LTLIBRARIES = libklpk.la
 
 libklpk_la_SOURCES = \
-    MyMatrix.hpp MyMultiVec.h MySignalMatrixOperator.h \
+    Solver.h   AnasaziSolver.h   ParpackSolver.h \
+    Solver.cpp AnasaziSolver.cpp ParpackSolver.cpp \
+    MyAnasazi.h \
     vec3.h Matrix.h \
-    abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
     abn.h cfg.h chealpix.h cubature.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
-    Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
+    abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
     Spline.h   SplitFile.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
-    SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
+    Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
     SelectionFunc.h   SeparationFunc.h   XiFunc.h   \
-    Model.cpp RealModel.cpp TestModel.cpp \
-    Model.h   RealModel.h   TestModel.h
+    SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
+    Model.h   RealModel.h   TestModel.h \
+    Model.cpp RealModel.cpp TestModel.cpp
 #    KaiserModel.cpp RealSplineModel.cpp SzapudiModel.cpp TestModel.cpp XiModel.cpp \
 #    KaiserModel.h   RealSplineModel.h   SzapudiModel.h   TestModel.h   XiModel.h
 libklpk_la_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -52,7 +54,9 @@ klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LI
 
 klt_anasazi_SOURCES = klt-anasazi.cpp
 klt_anasazi_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
+klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
+                    $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
+                    $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 
 
 printflags:

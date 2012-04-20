@@ -55,9 +55,11 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libklpk_la_LIBADD =
-am_libklpk_la_OBJECTS = abn.lo cfg.lo chealpix.lo cubature.lo eig.lo \
-	opsec.lo rng.lo libklpk_la-sig.lo libklpk_la-slp.lo \
-	libklpk_la-Cell.lo libklpk_la-QSpline.lo libklpk_la-Spline.lo \
+am_libklpk_la_OBJECTS = libklpk_la-Solver.lo \
+	libklpk_la-AnasaziSolver.lo libklpk_la-ParpackSolver.lo abn.lo \
+	cfg.lo chealpix.lo cubature.lo eig.lo opsec.lo rng.lo \
+	libklpk_la-sig.lo libklpk_la-slp.lo libklpk_la-Cell.lo \
+	libklpk_la-QSpline.lo libklpk_la-Spline.lo \
 	libklpk_la-SplitFile.lo libklpk_la-Survey.lo \
 	libklpk_la-BoxSurvey.lo libklpk_la-SphericalSurvey.lo \
 	libklpk_la-SelectionFunc.lo libklpk_la-SeparationFunc.lo \
@@ -129,6 +131,9 @@ klt_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 am_klt_anasazi_OBJECTS = klt_anasazi-klt-anasazi.$(OBJEXT)
 klt_anasazi_OBJECTS = $(am_klt_anasazi_OBJECTS)
 klt_anasazi_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 klt_anasazi_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -319,16 +324,18 @@ top_srcdir = @top_srcdir@
 # Static convenience library.
 noinst_LTLIBRARIES = libklpk.la
 libklpk_la_SOURCES = \
-    MyMatrix.hpp MyMultiVec.h MySignalMatrixOperator.h \
+    Solver.h   AnasaziSolver.h   ParpackSolver.h \
+    Solver.cpp AnasaziSolver.cpp ParpackSolver.cpp \
+    MyAnasazi.h \
     vec3.h Matrix.h \
-    abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
     abn.h cfg.h chealpix.h cubature.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
-    Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
+    abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
     Spline.h   SplitFile.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \
-    SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
+    Spline.cpp SplitFile.cpp Survey.cpp BoxSurvey.cpp SphericalSurvey.cpp \
     SelectionFunc.h   SeparationFunc.h   XiFunc.h   \
-    Model.cpp RealModel.cpp TestModel.cpp \
-    Model.h   RealModel.h   TestModel.h
+    SelectionFunc.cpp SeparationFunc.cpp XiFunc.cpp \
+    Model.h   RealModel.h   TestModel.h \
+    Model.cpp RealModel.cpp TestModel.cpp
 
 #    KaiserModel.cpp RealSplineModel.cpp SzapudiModel.cpp TestModel.cpp XiModel.cpp \
 #    KaiserModel.h   RealSplineModel.h   SzapudiModel.h   TestModel.h   XiModel.h
@@ -356,7 +363,10 @@ klt_CXXFLAGS = $(OPENMP_CFLAGS)
 klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 klt_anasazi_SOURCES = klt-anasazi.cpp
 klt_anasazi_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
+klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
+                    $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
+                    $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
+
 all: all-am
 
 .SUFFIXES:
@@ -489,13 +499,16 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate_mpi-estimate-mpi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt-klt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt_anasazi-klt-anasazi.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-AnasaziSolver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-BoxSurvey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Cell.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Model.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-ParpackSolver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-QSpline.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-RealModel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SelectionFunc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SeparationFunc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Solver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SphericalSurvey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Spline.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-SplitFile.Plo@am__quote@
@@ -548,6 +561,27 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
+
+libklpk_la-Solver.lo: Solver.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-Solver.lo -MD -MP -MF $(DEPDIR)/libklpk_la-Solver.Tpo -c -o libklpk_la-Solver.lo `test -f 'Solver.cpp' || echo '$(srcdir)/'`Solver.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-Solver.Tpo $(DEPDIR)/libklpk_la-Solver.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='Solver.cpp' object='libklpk_la-Solver.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-Solver.lo `test -f 'Solver.cpp' || echo '$(srcdir)/'`Solver.cpp
+
+libklpk_la-AnasaziSolver.lo: AnasaziSolver.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-AnasaziSolver.lo -MD -MP -MF $(DEPDIR)/libklpk_la-AnasaziSolver.Tpo -c -o libklpk_la-AnasaziSolver.lo `test -f 'AnasaziSolver.cpp' || echo '$(srcdir)/'`AnasaziSolver.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-AnasaziSolver.Tpo $(DEPDIR)/libklpk_la-AnasaziSolver.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='AnasaziSolver.cpp' object='libklpk_la-AnasaziSolver.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-AnasaziSolver.lo `test -f 'AnasaziSolver.cpp' || echo '$(srcdir)/'`AnasaziSolver.cpp
+
+libklpk_la-ParpackSolver.lo: ParpackSolver.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-ParpackSolver.lo -MD -MP -MF $(DEPDIR)/libklpk_la-ParpackSolver.Tpo -c -o libklpk_la-ParpackSolver.lo `test -f 'ParpackSolver.cpp' || echo '$(srcdir)/'`ParpackSolver.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libklpk_la-ParpackSolver.Tpo $(DEPDIR)/libklpk_la-ParpackSolver.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='ParpackSolver.cpp' object='libklpk_la-ParpackSolver.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -c -o libklpk_la-ParpackSolver.lo `test -f 'ParpackSolver.cpp' || echo '$(srcdir)/'`ParpackSolver.cpp
 
 libklpk_la-sig.lo: sig.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libklpk_la_CXXFLAGS) $(CXXFLAGS) -MT libklpk_la-sig.lo -MD -MP -MF $(DEPDIR)/libklpk_la-sig.Tpo -c -o libklpk_la-sig.lo `test -f 'sig.cpp' || echo '$(srcdir)/'`sig.cpp

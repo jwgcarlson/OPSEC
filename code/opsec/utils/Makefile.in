@@ -34,10 +34,14 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = $(UTILITIES) legendre$(EXEEXT)
 EXTRA_PROGRAMS = dm2abn$(EXEEXT) gmock$(EXEEXT) hpx2img$(EXEEXT) \
 	img2hpx$(EXEEXT) legendre$(EXEEXT) makeradial$(EXEEXT) \
 	multipole$(EXEEXT) realmock$(EXEEXT) vagc2abn$(EXEEXT)
+bin_PROGRAMS = dm2abn$(EXEEXT) legendre$(EXEEXT) makeradial$(EXEEXT) \
+	multipole$(EXEEXT) realmock$(EXEEXT) vagc2abn$(EXEEXT) \
+	$(am__EXEEXT_1) $(am__EXEEXT_2)
+@OPSEC_AM_HAVE_FFTW2_TRUE@am__append_1 = gmock
+@OPSEC_AM_HAVE_CIMG_TRUE@@OPSEC_AM_HAVE_LIBPNG_TRUE@am__append_2 = hpx2img img2hpx
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -53,18 +57,18 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/opsec_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+@OPSEC_AM_HAVE_FFTW2_TRUE@am__EXEEXT_1 = gmock$(EXEEXT)
+@OPSEC_AM_HAVE_CIMG_TRUE@@OPSEC_AM_HAVE_LIBPNG_TRUE@am__EXEEXT_2 = hpx2img$(EXEEXT) \
+@OPSEC_AM_HAVE_CIMG_TRUE@@OPSEC_AM_HAVE_LIBPNG_TRUE@	img2hpx$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_dm2abn_OBJECTS = dm2abn.$(OBJEXT)
 dm2abn_OBJECTS = $(am_dm2abn_OBJECTS)
 dm2abn_LDADD = $(LDADD)
-am_gmock_OBJECTS = gmock-gmock.$(OBJEXT) gmock-grid.$(OBJEXT)
+am_gmock_OBJECTS = gmock.$(OBJEXT) grid.$(OBJEXT)
 gmock_OBJECTS = $(am_gmock_OBJECTS)
 am__DEPENDENCIES_1 =
 gmock_DEPENDENCIES = $(am__DEPENDENCIES_1)
-gmock_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CXXLD) $(gmock_CXXFLAGS) $(CXXFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_hpx2img_OBJECTS = hpx2img.$(OBJEXT)
 hpx2img_OBJECTS = $(am_hpx2img_OBJECTS)
 hpx2img_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -261,19 +265,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -I$(top_srcdir)/src -DHAVE_MPI=1
+AM_CPPFLAGS = -I$(top_srcdir)/src
 AM_LDFLAGS = -L$(top_builddir)/src -lklpk
-legendre_SOURCES = legendre.cpp
 dm2abn_SOURCES = dm2abn.cpp
-gmock_SOURCES = gmock.cpp grid.cpp
-gmock_CXXFLAGS = $(OPENMP_CFLAGS)
-gmock_LDADD = $(FFTW2_LIBS)
-
-# Requires CImg.h header and libpng
-hpx2img_SOURCES = hpx2img.cpp
-hpx2img_LDADD = $(FITSIO_LIBS) $(LIBPNG)
-img2hpx_SOURCES = img2hpx.cpp
-img2hpx_LDADD = $(FITSIO_LIBS) $(LIBPNG)
+legendre_SOURCES = legendre.cpp
 makeradial_SOURCES = makeradial.cpp
 makeradial_LDADD = $(FITSIO_LIBS)
 multipole_SOURCES = multipole.cpp
@@ -281,6 +276,16 @@ multipole_CXXFLAGS = $(OPENMP_CFLAGS)
 realmock_SOURCES = realmock.cpp
 realmock_LDADD = $(FITSIO_LIBS)
 vagc2abn_SOURCES = vagc2abn.cpp
+
+# Requires FFTW2
+gmock_SOURCES = gmock.cpp grid.cpp
+gmock_LDADD = $(FFTW2_LIBS)
+
+# Requires CImg.h header and libpng
+hpx2img_SOURCES = hpx2img.cpp
+hpx2img_LDADD = $(FITSIO_LIBS) $(LIBPNG)
+img2hpx_SOURCES = img2hpx.cpp
+img2hpx_LDADD = $(FITSIO_LIBS) $(LIBPNG)
 all: all-am
 
 .SUFFIXES:
@@ -363,7 +368,7 @@ dm2abn$(EXEEXT): $(dm2abn_OBJECTS) $(dm2abn_DEPENDENCIES)
 	$(CXXLINK) $(dm2abn_OBJECTS) $(dm2abn_LDADD) $(LIBS)
 gmock$(EXEEXT): $(gmock_OBJECTS) $(gmock_DEPENDENCIES) 
 	@rm -f gmock$(EXEEXT)
-	$(gmock_LINK) $(gmock_OBJECTS) $(gmock_LDADD) $(LIBS)
+	$(CXXLINK) $(gmock_OBJECTS) $(gmock_LDADD) $(LIBS)
 hpx2img$(EXEEXT): $(hpx2img_OBJECTS) $(hpx2img_DEPENDENCIES) 
 	@rm -f hpx2img$(EXEEXT)
 	$(CXXLINK) $(hpx2img_OBJECTS) $(hpx2img_LDADD) $(LIBS)
@@ -393,8 +398,8 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm2abn.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gmock-gmock.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gmock-grid.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gmock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/grid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx2img.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/img2hpx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/legendre.Po@am__quote@
@@ -423,34 +428,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
-
-gmock-gmock.o: gmock.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -MT gmock-gmock.o -MD -MP -MF $(DEPDIR)/gmock-gmock.Tpo -c -o gmock-gmock.o `test -f 'gmock.cpp' || echo '$(srcdir)/'`gmock.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/gmock-gmock.Tpo $(DEPDIR)/gmock-gmock.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='gmock.cpp' object='gmock-gmock.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -c -o gmock-gmock.o `test -f 'gmock.cpp' || echo '$(srcdir)/'`gmock.cpp
-
-gmock-gmock.obj: gmock.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -MT gmock-gmock.obj -MD -MP -MF $(DEPDIR)/gmock-gmock.Tpo -c -o gmock-gmock.obj `if test -f 'gmock.cpp'; then $(CYGPATH_W) 'gmock.cpp'; else $(CYGPATH_W) '$(srcdir)/gmock.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/gmock-gmock.Tpo $(DEPDIR)/gmock-gmock.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='gmock.cpp' object='gmock-gmock.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -c -o gmock-gmock.obj `if test -f 'gmock.cpp'; then $(CYGPATH_W) 'gmock.cpp'; else $(CYGPATH_W) '$(srcdir)/gmock.cpp'; fi`
-
-gmock-grid.o: grid.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -MT gmock-grid.o -MD -MP -MF $(DEPDIR)/gmock-grid.Tpo -c -o gmock-grid.o `test -f 'grid.cpp' || echo '$(srcdir)/'`grid.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/gmock-grid.Tpo $(DEPDIR)/gmock-grid.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='grid.cpp' object='gmock-grid.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -c -o gmock-grid.o `test -f 'grid.cpp' || echo '$(srcdir)/'`grid.cpp
-
-gmock-grid.obj: grid.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -MT gmock-grid.obj -MD -MP -MF $(DEPDIR)/gmock-grid.Tpo -c -o gmock-grid.obj `if test -f 'grid.cpp'; then $(CYGPATH_W) 'grid.cpp'; else $(CYGPATH_W) '$(srcdir)/grid.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/gmock-grid.Tpo $(DEPDIR)/gmock-grid.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='grid.cpp' object='gmock-grid.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gmock_CXXFLAGS) $(CXXFLAGS) -c -o gmock-grid.obj `if test -f 'grid.cpp'; then $(CYGPATH_W) 'grid.cpp'; else $(CYGPATH_W) '$(srcdir)/grid.cpp'; fi`
 
 multipole-multipole.o: multipole.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(multipole_CXXFLAGS) $(CXXFLAGS) -MT multipole-multipole.o -MD -MP -MF $(DEPDIR)/multipole-multipole.Tpo -c -o multipole-multipole.o `test -f 'multipole.cpp' || echo '$(srcdir)/'`multipole.cpp

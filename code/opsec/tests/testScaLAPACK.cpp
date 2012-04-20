@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     /* Set up global BLACS context encompassing all processes */
     int nprocs, me;
     Cblacs_pinfo(&me, &nprocs);
-    Context gcontext = create_context(nprocs, 1);
+    slp::Context gcontext(nprocs, 1);
     me = gcontext.myrow;
 
     /* Decide on a good 2-D process grid for computation */

@@ -34,9 +34,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = testBoxSurvey$(EXEEXT) testMyMatrix$(EXEEXT) \
-	testScaLAPACK$(EXEEXT) testSplitFile$(EXEEXT) testabn$(EXEEXT) \
-	testcfg$(EXEEXT) testeig$(EXEEXT) testmv$(EXEEXT) \
-	testsig$(EXEEXT) testslp$(EXEEXT)
+	testSplitFile$(EXEEXT) testabn$(EXEEXT) testcfg$(EXEEXT) \
+	testeig$(EXEEXT) testmv$(EXEEXT) testsig$(EXEEXT) \
+	testslp$(EXEEXT)
 subdir = tests
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -60,11 +60,6 @@ testMyMatrix_OBJECTS = $(am_testMyMatrix_OBJECTS)
 am__DEPENDENCIES_1 =
 testMyMatrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_testScaLAPACK_OBJECTS = testScaLAPACK.$(OBJEXT) CuTest.$(OBJEXT)
-testScaLAPACK_OBJECTS = $(am_testScaLAPACK_OBJECTS)
-testScaLAPACK_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
 am_testSplitFile_OBJECTS = testSplitFile.$(OBJEXT) CuTest.$(OBJEXT)
 testSplitFile_OBJECTS = $(am_testSplitFile_OBJECTS)
 testSplitFile_LDADD = $(LDADD)
@@ -113,13 +108,13 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(testBoxSurvey_SOURCES) $(testMyMatrix_SOURCES) \
-	$(testScaLAPACK_SOURCES) $(testSplitFile_SOURCES) \
-	$(testabn_SOURCES) $(testcfg_SOURCES) $(testeig_SOURCES) \
-	$(testmv_SOURCES) $(testsig_SOURCES) $(testslp_SOURCES)
+	$(testSplitFile_SOURCES) $(testabn_SOURCES) $(testcfg_SOURCES) \
+	$(testeig_SOURCES) $(testmv_SOURCES) $(testsig_SOURCES) \
+	$(testslp_SOURCES)
 DIST_SOURCES = $(testBoxSurvey_SOURCES) $(testMyMatrix_SOURCES) \
-	$(testScaLAPACK_SOURCES) $(testSplitFile_SOURCES) \
-	$(testabn_SOURCES) $(testcfg_SOURCES) $(testeig_SOURCES) \
-	$(testmv_SOURCES) $(testsig_SOURCES) $(testslp_SOURCES)
+	$(testSplitFile_SOURCES) $(testabn_SOURCES) $(testcfg_SOURCES) \
+	$(testeig_SOURCES) $(testmv_SOURCES) $(testsig_SOURCES) \
+	$(testslp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -288,8 +283,6 @@ testsig_SOURCES = testsig.cpp CuTest.c
 testBoxSurvey_SOURCES = testBoxSurvey.cpp CuTest.c
 testMyMatrix_SOURCES = testMyMatrix.cpp CuTest.c
 testMyMatrix_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
-testScaLAPACK_SOURCES = testScaLAPACK.cpp CuTest.c
-testScaLAPACK_LDADD = $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 testslp_SOURCES = testslp.cpp CuTest.c
 testslp_LDADD = $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 testSplitFile_SOURCES = testSplitFile.cpp CuTest.c
@@ -342,9 +335,6 @@ testBoxSurvey$(EXEEXT): $(testBoxSurvey_OBJECTS) $(testBoxSurvey_DEPENDENCIES)
 testMyMatrix$(EXEEXT): $(testMyMatrix_OBJECTS) $(testMyMatrix_DEPENDENCIES) 
 	@rm -f testMyMatrix$(EXEEXT)
 	$(CXXLINK) $(testMyMatrix_OBJECTS) $(testMyMatrix_LDADD) $(LIBS)
-testScaLAPACK$(EXEEXT): $(testScaLAPACK_OBJECTS) $(testScaLAPACK_DEPENDENCIES) 
-	@rm -f testScaLAPACK$(EXEEXT)
-	$(CXXLINK) $(testScaLAPACK_OBJECTS) $(testScaLAPACK_LDADD) $(LIBS)
 testSplitFile$(EXEEXT): $(testSplitFile_OBJECTS) $(testSplitFile_DEPENDENCIES) 
 	@rm -f testSplitFile$(EXEEXT)
 	$(CXXLINK) $(testSplitFile_OBJECTS) $(testSplitFile_LDADD) $(LIBS)
@@ -376,7 +366,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CuTest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testBoxSurvey.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testMyMatrix.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testScaLAPACK.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testSplitFile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testabn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testcfg.Po@am__quote@

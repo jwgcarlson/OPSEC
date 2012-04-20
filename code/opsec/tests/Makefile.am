@@ -1,7 +1,7 @@
 CC = $(MPICC)
 CXX = $(MPICXX)
 
-check_PROGRAMS = testBoxSurvey testMyMatrix testScaLAPACK testSplitFile testabn testcfg testeig testmv testsig testslp
+check_PROGRAMS = testBoxSurvey testMyMatrix testSplitFile testabn testcfg testeig testmv testsig testslp
 TESTS = $(check_PROGRAMS)
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
@@ -23,9 +23,6 @@ testBoxSurvey_SOURCES = testBoxSurvey.cpp CuTest.c
 
 testMyMatrix_SOURCES = testMyMatrix.cpp CuTest.c
 testMyMatrix_LDADD = $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
-
-testScaLAPACK_SOURCES = testScaLAPACK.cpp CuTest.c
-testScaLAPACK_LDADD = $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
 
 testslp_SOURCES = testslp.cpp CuTest.c
 testslp_LDADD = $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS)
