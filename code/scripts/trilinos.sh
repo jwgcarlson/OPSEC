@@ -49,11 +49,14 @@ build_trilinos() {
         rm -f CMakeCache.txt
     fi
     $CMAKE \
+        -Wno-dev \
         -D CMAKE_INSTALL_PREFIX:PATH="$PREFIX" \
         -D CMAKE_BUILD_TYPE:STRING=RELEASE \
         -D CMAKE_VERBOSE_MAKEFILE:BOOL=TRUE \
         -D TPL_ENABLE_MPI:BOOL=ON \
         -D TPL_ENABLE_Boost:BOOL=ON \
+        -D TPL_BLAS_LIBRARIES="$BLAS_LIBS" \
+        -D TPL_LAPACK_LIBRARIES="-lm $LAPACK_LIBS $BLAS_LIBS -lm" \
         -D Trilinos_ENABLE_OpenMP:BOOL=ON \
         -D Trilinos_ENABLE_ALL_PACKAGES:BOOL=FALSE \
         -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES:BOOL=FALSE \

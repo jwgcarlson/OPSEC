@@ -1,0 +1,11 @@
+*.o
+*.lo
+*.la
+.libs
+.deps
+config.log
+config.status
+autom4te.cache
+bin
+include
+lib

@@ -56,7 +56,7 @@ clean_openblas() {
     cd $OPENBLAS_SRCDIR || exit 1
     case "$1" in
     clean)
-        make $target || exit 1
+        make clean || exit 1
         ;;
     uninstall)
         rm -f $OPSEC_ROOT/lib/libopenblas*

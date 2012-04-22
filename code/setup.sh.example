@@ -7,6 +7,7 @@ export PREFIX="$OPSEC_ROOT"
 #export CC=
 #export CXX=
 #export F77=
+#export FC=
 #export MPICC=
 #export MPICXX=
 #export MPIF77=
@@ -17,15 +18,37 @@ export PREFIX="$OPSEC_ROOT"
 #export LDFLAGS=
 #export BLAS_LIBS=
 #export LAPACK_LIBS=
+#export BLACS_LIBS=
+#export SCALAPACK_LIBS=
 #export MPIFLIBS=
+
+# OpenBLAS
+#   The following sets the version of OpenBLAS to use if you decide to install
+#   it using the `build.sh openblas` command.  The default is to pull the
+#   latest version from the Github repository.  You must have Git installed.
+export OPENBLAS_VERSION=git
+#   If you decide to install OpenBLAS this way, you should uncomment the
+#   following line to use it as the default BLAS and LAPACK libraries:
+#export BLAS_LIBS="-lopenblas"
+#   If you're using GCC, you might also need libgfortran here, i.e.
+#export BLAS_LIBS="-lopenblas -lgfortran"
+
+# ScaLAPACK
+#   If you decide to use `build.sh scalapack` to install ScaLAPACK, you should
+#   uncomment the following line:
+#export BLACS_LIBS="-lscalapack"
+#   Note that SCLAPACK_LIBS is unnecessary in this case, as the most recent
+#   versions come with BLACS, PBLAS, and ScaLAPACK all packaged into the single
+#   library libscalapack.
 
 # Trilinos
 export TRILINOS_VERSION=10.10.1
 #export TRILINOS_EXTRA_CMAKE_OPTIONS=
 
-# OpenBLAS (optional)
-export OPENBLAS_VERSION=git
 
+# Working setups for particular machines.  These can be used as examples on
+# which to base your own setup script.  (NB: These may be out of date, as
+# some system administrators tend to move files around indiscriminantly.)
 
 ##### Setup for riemann #####
 #export CPPFLAGS="-I/home/jcarlson/include"

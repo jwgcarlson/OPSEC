@@ -186,8 +186,10 @@ int main(int argc, char* argv[]) {
 #endif
 
     /* This is a simple serial job, so only run on root process */
-    if(me != 0)
+    if(me != 0) {
+        MPI_Finalize();
         return 0;
+    }
 
     /* Parse command line and configuration options */
     Config cfg = opsec_init(argc, argv, usage);
@@ -333,5 +335,7 @@ int main(int argc, char* argv[]) {
 
     fclose(fcells);
     cfg_destroy(opts);
+
+    MPI_Finalize();
     return 0;
 }
