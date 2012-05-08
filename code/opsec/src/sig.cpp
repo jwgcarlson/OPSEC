@@ -39,8 +39,8 @@ using std::vector;
 #  define SIGNAL_MAXEVAL 50000000
 #endif
 
-template<typename T> static inline T cb(T x) { return x*x*x; }
-template<typename T> static inline void swap(T& x, T& y) { T tmp = x; x = y; y = tmp; }
+template<class T> static inline T cb(T x) { return x*x*x; }
+template<class T> static inline void swap(T& x, T& y) { T tmp = x; x = y; y = tmp; }
 
 /* Parameters:
  * Ncells: size of global signal matrix

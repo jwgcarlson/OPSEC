@@ -31,10 +31,11 @@ using std::vector;
 #include "Survey.h"
 #include "abn.h"
 #include "cfg.h"
+#include "cubature.h"
 #include "opsec.h"
 #include "rng.h"
 
-template<typename T> static inline T cb(T x) { return x*x*x; }
+template<class T> static inline T cb(T x) { return x*x*x; }
 
 const char* usage =
     "Usage: %s [SWITCHES] [OPTIONS]\n"
@@ -50,129 +51,80 @@ const char* usage =
     "  Nr,Nmu,Nphi,RMin,RMax,MuMin,MuMax,PhiMin,PhiMax\n"
     "                Required if coordsys == 'spherical'\n";
 
+struct CubatureData {
+    SelectionFunc& nbar;
+};
+
+static void cartesian_integrand(unsigned ndim, unsigned npt, const double* uu,
+                                void* data, unsigned fdim, double* fval)
+{
+    SelectionFunc& nbar = ((CubatureData*) data)->nbar;
+    #pragma omp parallel for
+    for(unsigned i = 0; i < npt; i++) {
+        const double* u = &uu[3*i];
+        double x = u[0];
+        double y = u[1];
+        double z = u[2];
+        fval[i] = nbar(x, y, z);
+    }
+}
+
+static void spherical_integrand(unsigned ndim, unsigned npt, const double* uu,
+                                void* data, unsigned fdim, double* fval)
+{
+    SelectionFunc& nbar = ((CubatureData*) data)->nbar;
+    #pragma omp parallel for
+    for(unsigned i = 0; i < npt; i++) {
+        const double* u = &uu[3*i];
+        double r = cbrt(u[0]);
+        double mu =     u[1];
+        double phi =    u[2];
+        fval[i] = nbar(r, mu, phi);
+    }
+}
+
 /* Compute the effective volume and the expected number of galaxies within the
  * cell.  Return true if the cell should be kept, false if it should be
  * discarded. */
-bool FinalizeCellS(Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double epsabs = 1e-10) {
-    const int lg2n_min = 6, lg2n_max = 30;
-
-    Sobol sobol;
-    rng_sobol_init(&sobol, 3);
-    double p[3];
-
-    double r, mu, phi;
-    double rmincb = cb(c.rmin), rmaxcb = cb(c.rmax);
-
-    int n = 0, numzero = 0;
-    double f, fsum = 0.;
-    double Q, oldQ = 0., dQ;
-    for(int lg2n = lg2n_min; lg2n <= lg2n_max; lg2n++) {
-        while(n < (1 << lg2n)) {
-            rng_sobol_get(&sobol, p);
-
-            r = cbrt((1 - p[0]) * rmincb + p[0] * rmaxcb);
-            mu = (1 - p[1]) * c.mumin + p[1] * c.mumax;
-            phi = (1 - p[2]) * c.phimin + p[2] * c.phimax;
-            f = nbar(r, mu, phi);
-            if(f == 0.0)
-                numzero++;
-            else
-                fsum += f;
-            n++;
-        }
-
-        /* Declare convergence if the integral changes by only a small amount
-         * after doubling the number of evaluation points. */
-        Q = fsum/n;
-        dQ = fabs(Q - oldQ);
-        if(dQ < fmax(epsabs, fabs(Q)*epsrel))
-            break;
-
-        /* Otherwise continue with the next batch of evaluations. */
-        oldQ = Q;
-    }
-
-    /* Total volume of cell */
-    double V = (rmaxcb - rmincb)/3 * (c.mumax - c.mumin) * (c.phimax - c.phimin);
-
-    /* Fraction of cell for which the number density vanishes */
-    double fzero = double(numzero)/double(n);
-
-    /* Keep cell only if nbar is nonzero over a significant fraction of the volume */
-    if(fzero == 1.)
-        return false;
-    else {
-        c.Veff = (1 - fzero) * V;
-        c.Nbar = Q * V;
-        return true;
-    }
-}
-
-/* Compute the effective volume of and the expected number of galaxies within
- * the cell.  Return true if the cell should be kept, false if it should be
- * discarded. */
-bool FinalizeCellC(Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double epsabs = 1e-10) {
-    const int lg2n_min = 6, lg2n_max = 30;
-
-    Sobol sobol;
-    rng_sobol_init(&sobol, 3);
-    double p[3];
-
-    double x, y, z;
-    int n = 0, numzero = 0;
-    double f, fsum = 0.;
-    double Q, oldQ = 0., dQ;
-    for(int lg2n = lg2n_min; lg2n <= lg2n_max; lg2n++) {
-        while(n < (1 << lg2n)) {
-            rng_sobol_get(&sobol, p);
-
-            x = (1 - p[0])*c.xmin + p[0]*c.xmax;
-            y = (1 - p[1])*c.ymin + p[1]*c.ymax;
-            z = (1 - p[2])*c.zmin + p[2]*c.zmax;
-            f = nbar(x, y, z);
-            if(f == 0.0)
-                numzero++;
-            else
-                fsum += f;
-            n++;
-        }
-
-        /* Declare convergence if the integral changes by only a small amount
-         * after doubling the number of evaluation points. */
-        Q = fsum/n;
-        dQ = fabs(Q - oldQ);
-        if(dQ < fmax(epsabs, fabs(Q)*epsrel))
-            break;
-
-        /* Otherwise continue with the next batch of evaluations. */
-        oldQ = Q;
-    }
-
-    /* Total volume of cell */
-    double V = (c.xmax - c.xmin) * (c.ymax - c.ymin) * (c.zmax - c.zmin);
-
-    /* Fraction of cell for which the number density vanishes */
-    double fzero = double(numzero)/double(n);
-
-    /* Keep cell only if nbar is nonzero over a significant fraction of the volume */
-    if(fzero == 1.)
-        return false;
-    else {
-        c.Veff = (1 - fzero) * V;
-        c.Nbar = Q * V;
-        return true;
-    }
-}
-
 bool FinalizeCell(int coordsys, Cell& c, SelectionFunc& nbar, double epsrel = 1e-5, double epsabs = 1e-10) {
-    if(coordsys == CoordSysSpherical)
-        return FinalizeCellS(c, nbar, epsrel, epsabs);
-    else if(coordsys == CoordSysCartesian)
-        return FinalizeCellC(c, nbar, epsrel, epsabs);
-    else {
-        opsec_error("FinalizeCell: coordsys = %d\n", coordsys);
-        return false;
+    /* Compute average of nbar within the cell */
+    CubatureData data = { nbar };
+    unsigned maxeval = 5000000;
+    double N, err;
+    if(coordsys == CoordSysCartesian) {
+        double umin[3] = { c.xmin, c.ymin, c.zmin };
+        double umax[3] = { c.xmax, c.ymax, c.zmax };
+        adapt_integrate_v(1, cartesian_integrand, (void*) &data,
+                          3, umin, umax,
+                          maxeval, epsrel, epsabs,
+                          &N, &err);
     }
+    else if(coordsys == CoordSysSpherical) {
+        double umin[3] = { cb(c.rmin), c.mumin, c.phimin };
+        double umax[3] = { cb(c.rmax), c.mumax, c.phimax };
+        adapt_integrate_v(1, spherical_integrand, (void*) &data,
+                          3, umin, umax,
+                          maxeval, epsrel, epsabs,
+                          &N, &err);
+    }
+
+    /* Compute total volume of cell */
+    double V = 0;
+    if(coordsys == CoordSysCartesian) {
+        V = (c.xmax - c.xmin) * (c.ymax - c.ymin) * (c.zmax - c.zmin);
+    }
+    else if(coordsys == CoordSysSpherical) {
+        V = (cb(c.rmax) - cb(c.rmin))/3 * (c.mumax - c.mumin) * (c.phimax - c.phimin);
+    }
+
+    /* Keep cell only if nbar is not identically zero within the cell */
+    if(N > 0) {
+        c.Veff = V;
+        c.Nbar = N;
+        return true;
+    }
+    else
+        return false;
 }
 
 

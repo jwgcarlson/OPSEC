@@ -9,4 +9,12 @@ Quick start:
 * To clean:
     ./clean.sh all
 
-
+Build notes:
+* If you run into errors while compiling OpenBLAS with gfortran complaining
+  about undefined references to slacgv_, see this page:
+    http://icl.cs.utk.edu/lapack-forum/archives/lapack/msg01250.html
+  The gist is that you can remove the reference to SLACGV from
+    OpenBLAS-git/lappack-3.4.0/SRC/stprfb.f (line 283).
+  Then go to the OpenBLAS-git/ directory and run
+    make
+    make install PREFIX="$OPSEC_ROOT"

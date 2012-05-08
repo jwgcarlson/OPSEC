@@ -9,7 +9,7 @@ libklpk_la_SOURCES = \
     Solver.h   AnasaziSolver.h   ParpackSolver.h \
     Solver.cpp AnasaziSolver.cpp ParpackSolver.cpp \
     MyAnasazi.h \
-    vec3.h Matrix.h \
+    Matrix.h \
     abn.h cfg.h chealpix.h cubature.h eig.h opsec.h rng.h sig.h   slp.h   Cell.h   QSpline.h \
     abn.c cfg.c chealpix.c cubature.c eig.c opsec.c rng.c sig.cpp slp.cpp Cell.cpp QSpline.cpp \
     Spline.h   SplitFile.h   Survey.h   BoxSurvey.h   SphericalSurvey.h \

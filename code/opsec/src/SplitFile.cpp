@@ -1,5 +1,8 @@
 #include <cassert>
 #include <cstdio>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "SplitFile.h"
 
@@ -30,12 +33,16 @@ bool SplitFile::isopen() {
     return (cur_stream != NULL);
 }
 
+const std::string& SplitFile::get_base_filename() const {
+    return base_filename;
+}
+
 const std::string& SplitFile::get_filename() const {
     return cur_filename;
 }
 
-const std::string& SplitFile::get_base_filename() const {
-    return base_filename;
+long SplitFile::get_filesize() const {
+    return cur_size;
 }
 
 void SplitFile::open(const char* filename_, const char* mode_) {
@@ -45,6 +52,11 @@ void SplitFile::open(const char* filename_, const char* mode_) {
     cur_filename = base_filename;
     cur_index = 0;
     cur_stream = fopen(cur_filename.c_str(), mode.c_str());
+    if(cur_stream) {
+        struct stat s;
+        stat(cur_filename.c_str(), &s);
+        cur_size = (long) s.st_size;
+    }
 }
 
 void SplitFile::reopen() {
@@ -54,8 +66,39 @@ void SplitFile::reopen() {
 void SplitFile::close() {
     if(cur_stream != NULL)
         fclose(cur_stream);
+    cur_size = 0;
     cur_stream = NULL;
     cur_filename = "";
+}
+
+size_t SplitFile::skip(size_t count) {
+    if(!isopen())
+        return 0;
+    if(mode.length() < 1 || mode[0] != 'r') {
+        /* Not sure what skip() should do in write mode... */
+        return 0;
+    }
+
+    /* Keep opening new files until we've skipped the requested number of bytes.
+     * Most likely this will happen on the first pass. */
+    long skipped = 0;
+    while(skipped < count) {
+        long nleft = count - skipped;   // number of bytes left to skip
+        long pos = ftell(cur_stream);   // current file position
+        if(pos + nleft > cur_size) {
+            /* Need to open the next file */
+            skipped += (cur_size - pos);        // the rest of the current file
+            open_next();
+            if(!isopen())
+                /* Couldn't open the next file, need to return early */
+                break;
+        }
+        else {
+            fseek(cur_stream, nleft, SEEK_CUR);
+            skipped += nleft;
+        }
+    }
+    return (size_t) skipped;
 }
 
 /* Read count bytes of data, storing them in the location given by buf.
@@ -67,7 +110,7 @@ size_t SplitFile::read(char* buf, size_t count) {
     while(ntotal < count) {
         /* If we don't have a valid current file, we failed */
         if(!isopen() || ferror(cur_stream))
-            return ntotal;
+            break;
 
         /* Try to read data from current file */
         size_t nread = fread(buf, 1, count - ntotal, cur_stream);

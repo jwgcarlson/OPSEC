@@ -26,7 +26,6 @@
 #include "abn.h"
 #include "cfg.h"
 #include "opsec.h"
-#include "Matrix.h"
 #include "Model.h"
 #include "MyMatrix.hpp"
 #include "SplitFile.h"
@@ -144,7 +143,7 @@ real* ReadPixels(const char* pixfile, int* Npixels_ = NULL) {
 /* Read ABN header of covariance matrix derivatives file.  If specified, check
  * that Nparams and Nmodes have the expected values.  This function should be
  * run by the root process only. */
-void ReadCovHeader(SplitFile& fcov, int Nparams = -1, int Nmodes = -1) {
+void ReadCovHeader(SplitFile& fcov, int Nparams = -1, int Nmodes = -1, int packed = -1) {
     const char* covfile = fcov.get_filename().c_str();
 
     size_t n, size;
@@ -171,14 +170,19 @@ void ReadCovHeader(SplitFile& fcov, int Nparams = -1, int Nmodes = -1) {
         fprintf(stderr, "ReadCovHeader: Nmodes inconsistent (%s,%d,%d)\n", covfile, Nmodes, cfg_get_int(opts, "Nmodes"));
         opsec_exit(1);
     }
+    if(packed > 0 && cfg_has_key(opts, "packed") && cfg_get_int(opts, "packed") != packed) {
+        fprintf(stderr, "ReadCovHeader: packed inconsistent (%s,%d,%d)\n", covfile, packed, cfg_get_int(opts, "packed"));
+        opsec_exit(1);
+    }
     cfg_destroy(opts);
 }
 
 /* Read a symmetric n-by-n matrix from file, and distribute across processes.
- * The matrix is assumed to be in packed storage, with the n*(n+1)/2 unique
- * elements arranged in a flat array.  These elements are distributed in the
- * natural way for a flat array. */
-void ReadSymmetricMatrix(SplitFile& f, int n, real* ap) {
+ * The matrix may either be stored in its entirety (all n*n elements), or in
+ * column-major upper packed format, where only the n*(n+1)/2 unique elements
+ * are stored.  Regardless, only the n*(n+1)/2 unique elements are returned,
+ * distributed among processes as a naturally partitioned flat array. */
+void ReadSymmetricMatrix(SplitFile& f, int n, real* ap, int packed) {
     int nprocs = 1, me = 0;
 #ifdef OPSEC_USE_MPI
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -186,40 +190,141 @@ void ReadSymmetricMatrix(SplitFile& f, int n, real* ap) {
 #endif
 
     /* Total number of unique elements in a symmetric matrix */
-    int k = (n*(n+1))/2;
+    int ktotal = (n*(n+1))/2;
 
-    /* Number of elements belonging to each process (natural partition) */
+    /* Number of elements that will be assigned to each process (natural partition) */
     std::vector<int> kloc(nprocs);
     for(int p = 0; p < nprocs; p++)
-        kloc[p] = (k/nprocs) + (p < (k % nprocs));
+        kloc[p] = (ktotal/nprocs) + (p < (ktotal % nprocs));
 
     /* Read in matrix elements, and distribute to the appropriate processes */
     if(me == 0) {
-        /* Read in root process' elements directly to local storage */
-        ssize_t nread = f.read((char*) ap, kloc[0]*sizeof(real));
-        if(nread != kloc[0]*sizeof(real)) {
-            fprintf(stderr, "ReadSymmetricMatrix: read error (%s,%d,%d,%zd)\n", f.get_filename().c_str(), 0, kloc[0], nread);
-            opsec_abort(1);
-        }
-#ifdef OPSEC_USE_MPI
-        /* Temporary storage for other process' elements (kloc[0] >= kloc[p] for all p >= 1) */
-        real* tmp = (real*) opsec_malloc(kloc[0]*sizeof(real));
-        for(int p = 1; p < nprocs; p++) {
-            nread = f.read((char*) tmp, kloc[p]*sizeof(real));
-            if(nread != kloc[p]*sizeof(real)) {
-                fprintf(stderr, "ReadSymmetricMatrix: read error (%s,%d,%d,%zd)\n", f.get_filename().c_str(), p, kloc[p], nread);
-                opsec_abort(1);
+        /* Temporary storage for other process' elements.  We need room for at
+         * most kloc[0] elements, since kloc[0] >= kloc[p] for all p >= 1.  We
+         * only need this memory if nprocs > 1. */
+        real* tmp = (nprocs == 1) ? NULL
+                                  : (real*) opsec_malloc(kloc[0]*sizeof(real));
+
+        /* Current column and row number, for non-packed storage */
+        int col = 0, row = 0;
+
+        for(int p = 0; p < nprocs; p++) {
+            /* Read kloc[p] elements from file */
+            char* buf = (p == 0) ? (char*) ap       // read directly into root process' output buffer
+                                 : (char*) tmp;     // read into temporary buffer before sending to another process
+
+            if(packed) {
+                /* Packed storage, where the n*(n+1)/2 unique matrix elements are
+                 * arranged in a flat array, in column-major upper-diagonal packed
+                 * storage.  These elements will be read directly from file and
+                 * distributed evenly among processes. */
+
+                size_t nread = f.read(buf, kloc[p]*sizeof(real));
+                if(nread != kloc[p]*sizeof(real)) {
+                    opsec_error("ReadSymmetricMatrix: read error (%s,%d,%d,%zd)\n", f.get_filename().c_str(), p, kloc[p], nread);
+                    opsec_abort(1);
+                }
             }
-            /* Send elements to process p */
-            MPI_Send(tmp, kloc[p], REAL_MPI_TYPE, p, 0, MPI_COMM_WORLD);
+            else {
+                /* Full matrix storage, where all n*n matrix elements are stored.
+                 * Since the matrix is symmetric, we only need n*(n+1)/2 of them
+                 * for subsequent calculations, so we discard the rest while
+                 * reading from file. */
+
+                int nsofar = 0;         // number of elements read so far, out of kloc[p]
+                while(nsofar < kloc[p]) {
+                    int nneeded = kloc[p] - nsofar;
+                    int nleftincol = (col + 1 - row);
+                    if(nneeded > nleftincol) {
+                        /* Read in all elements left in column, increment column, and reset row */
+                        size_t nread = f.read(buf, nleftincol*sizeof(real));
+                        if(nread != nleftincol*sizeof(real)) {
+                            opsec_error("ReadSymmetricMatrix: read error (%s,%d,%d,%zd,%d,%d,%d)\n", f.get_filename().c_str(), p, kloc[p], nread, col, row, nleftincol);
+                            opsec_abort(1);
+                        }
+                        buf += nleftincol*sizeof(real);
+                        col += 1;
+                        row = 0;
+                    }
+                    else {
+                        /* Read only the elements that we need, and update row */
+                        size_t nread = f.read(buf, nneeded*sizeof(real));
+                        if(nread != nneeded*sizeof(real)) {
+                            opsec_error("ReadSymmetricMatrix: read error (%s,%d,%d,%zd,%d,%d,%d)\n", f.get_filename().c_str(), p, kloc[p], nread, col, row, nneeded);
+                            opsec_abort(1);
+                        }
+                        row += nneeded;
+                    }
+                }
+            }
         }
+
+#if 0
+        if(packed) {
+            /* Packed storage, where the n*(n+1)/2 unique matrix elements are
+             * arranged in a flat array, in column-major upper-diagonal packed
+             * storage.  These elements will be read directly from file and
+             * distributed evenly among processes. */
+
+            for(int p = 0; p < nprocs; p++) {
+                char* buf = (p == 0) ? (char*) ap       // read directly into root process' output buffer
+                                     : (char*) tmp;     // read into temporary buffer before sending to another process
+                size_t nread = f.read(buf, kloc[p]*sizeof(real));
+                if(nread != kloc[p]*sizeof(real)) {
+                    opsec_error("ReadSymmetricMatrix: read error (%s,%d,%d,%zd)\n", f.get_filename().c_str(), p, kloc[p], nread);
+                    opsec_abort(1);
+                }
+                if(p != 0) {
+                    /* Send elements to process p */
+                    MPI_Send(buf, kloc[p], REAL_MPI_TYPE, p, 0, MPI_COMM_WORLD);
+                }
+            }
+        }
+        else {
+            /* Full matrix storage, where all n*n matrix elements are stored.
+             * Since the matrix is symmetric, we only need n*(n+1)/2 of them
+             * for subsequent calculations, so we discard the rest while
+             * reading from file. */
+
+            int col = 0, row = 0;       // current column and row number within file
+            for(int p = 0; p < nprocs; p++) {
+                char* buf = (p == 0) ? (char*) ap       // read directly into root process' output buffer
+                                     : (char*) tmp;     // read into temporary buffer before sending to another process
+                int nsofar = 0;         // number of elements read so far, out of kloc[p]
+                while(nsofar < kloc[p]) {
+                    int nneeded = kloc[p] - nsofar;
+                    int nleftincol = (col + 1 - row);
+                    if(nneeded > nleftincol) {
+                        /* Read in all elements left in column, increment column, and reset row */
+                        size_t nread = f.read(buf, nleftincol*sizeof(real));
+                        if(nread != nleftincol*sizeof(real)) {
+                            opsec_error("ReadSymmetricMatrix: read error (%s,%d,%d,%zd,%d,%d,%d)\n", f.get_filename().c_str(), p, kloc[p], nread, col, row, nleftincol);
+                            opsec_abort(1);
+                        }
+                        buf += nleftincol*sizeof(real);
+                        col += 1;
+                        row = 0;
+                    }
+                    else {
+                        /* Read only the elements that we need, and update row */
+                        size_t nread = f.read(buf, nneeded*sizeof(real));
+                        if(nread != nneeded*sizeof(real)) {
+                            opsec_error("ReadSymmetricMatrix: read error (%s,%d,%d,%zd,%d,%d,%d)\n", f.get_filename().c_str(), p, kloc[p], nread, col, row, nneeded);
+                            opsec_abort(1);
+                        }
+                        row += nneeded;
+                    }
+                }
+            }
+        }
+#endif
         free(tmp);
     }
-    else {
+
+    if(me != 0) {
         /* Receive elements from root process */
         MPI_Status status;
         MPI_Recv(ap, kloc[me], REAL_MPI_TYPE, 0, 0, MPI_COMM_WORLD, &status);
-#endif
     }
 }
 
@@ -236,7 +341,7 @@ int main(int argc, char* argv[]) {
     Config cfg = opsec_init(argc, argv, usage);
 
     /* Make sure all the necessary options are provided */
-    if(!cfg_has_keys(cfg, "estfile,evalfile,covfile,pixfile,Nmodes", ",")) {
+    if(!cfg_has_keys(cfg, "estfile,evalfile,covfile,pixfile,Nmodes,packed_matrices", ",")) {
         fprintf(stderr, "estimate: missing configuration options\n");
         fputs(usage, stderr);
         opsec_exit(1);
@@ -247,6 +352,7 @@ int main(int argc, char* argv[]) {
     const char* covfile = cfg_get(cfg, "covfile");
     const char* pixfile = cfg_get(cfg, "pixfile");
     int Nmodes = cfg_get_int(cfg, "Nmodes");
+    int packed = cfg_get_int(cfg, "packed_matrices");
 
     std::string mixing = "inverse";
     if(cfg_has_key(cfg, "mixing"))
@@ -322,10 +428,10 @@ int main(int argc, char* argv[]) {
             opsec_abort(1);
         }
         /* Read header */
-        ReadCovHeader(fcov, Nparams, Nmodes);
+        ReadCovHeader(fcov, Nparams, Nmodes, packed);
     }
     for(int m = 0; m < Nparams; m++)
-        ReadSymmetricMatrix(fcov, Nmodes, &dvalues[m*mylocsize]);
+        ReadSymmetricMatrix(fcov, Nmodes, &dvalues[m*mylocsize], packed);
     if(me == 0)
         fcov.close();
 
