@@ -341,7 +341,7 @@ int main(int argc, char* argv[]) {
     Config cfg = opsec_init(argc, argv, usage);
 
     /* Make sure all the necessary options are provided */
-    if(!cfg_has_keys(cfg, "estfile,evalfile,covfile,pixfile,Nmodes,packed_matrices", ",")) {
+    if(!cfg_has_keys(cfg, "estfile,evalfile,covfile,pixfile,Nmodes", ",")) {
         fprintf(stderr, "estimate: missing configuration options\n");
         fputs(usage, stderr);
         opsec_exit(1);
@@ -352,7 +352,11 @@ int main(int argc, char* argv[]) {
     const char* covfile = cfg_get(cfg, "covfile");
     const char* pixfile = cfg_get(cfg, "pixfile");
     int Nmodes = cfg_get_int(cfg, "Nmodes");
-    int packed = cfg_get_int(cfg, "packed_matrices");
+
+    /* Check whether symmetric matrices are packed or not (default is no) */
+    int packed = 0;
+    if(cfg_has_key(cfg, "packed_matrices"))
+        packed = cfg_get_int(cfg, "packed_matrices");
 
     std::string mixing = "inverse";
     if(cfg_has_key(cfg, "mixing"))

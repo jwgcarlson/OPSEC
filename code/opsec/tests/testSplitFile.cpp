@@ -39,11 +39,20 @@ void TestSplitFile(CuTest* tc) {
 
     snprintf(splitname, 256, "%s/splitrandom00", tmpdir);
     SplitFile sf(splitname, "r");
-    ssize_t nread = sf.read(randin, nbytes);
+    size_t nread = sf.read(randin, nbytes);
     CuAssertIntEquals(tc, (int) nbytes, (int) nread);
     for(int i = 0; i < nbytes; i++)
         CuAssertIntEquals(tc, (int) randout[i], (int) randin[i]);
 
+    /* Test skip() */
+    sf.reopen();
+    size_t nskipped = sf.skip(nbytes/2);
+    CuAssertIntEquals(tc, (int) nskipped, (int) nbytes/2);
+    sf.read(randin, nbytes - nskipped);
+    for(int i = nskipped; i < nbytes; i++)
+        CuAssertIntEquals(tc, (int) randout[i], (int) randin[i-nskipped]);
+
+    /* Clean up */
     snprintf(command, 512, "rm -f %s/fullrandom %s/splitrandom*", tmpdir, tmpdir);
     status = system(command);
 }
