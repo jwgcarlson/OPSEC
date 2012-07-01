@@ -76,11 +76,12 @@ the case of measuring $P(k)$ from the large-scale clustering of galaxies.
 
 To make use of \opsec, only three inputs must be given:
 \begin{enumerate}
-\item The observed number density field $n(\r)$ for a particular tracer
-    (equivalently, a list of positions $\{\r_g\}$).
+\item The observed number density field $n(\r)$ for a particular tracer.  For
+    discrete tracers, this is equivalent to a list of positions $\{\r_g\}$
+    (and, optionally, weights $w_g$).
 \item The expected density $\bar{n}(\r)$ of this tracer in the absence of
-    clustering (usually estimated from the observed positions, taking into
-    account the selection and masks used in the survey).
+    clustering (usually estimated by some smoothing of the observed density
+    field, taking into account the selection and masks used in the survey).
 \item A model for how the observed 2-point correlation function depends on a
     set of cosmological parameters $p_n$ ($1 \le n \le N_p$), along with a set
     of prior estimates $p_n^{(0)}$ for these parameters (usually from previous
@@ -98,13 +99,13 @@ $\psi_i(\r)$, and defining
 \end{equation}
 (Here and in the following, 3-dimensional integrals are to extend only over the
 volume of the survey.)  We refer to these coefficients $y_i$ as ``pixel
-values.''  The optimal choice of the mode functions $\psi_i$ is itself a
+values.''  The best choice of the mode functions $\psi_i$ is itself a
 complicated issue, which we address in Section \ref{sec:klmodes}.  For now,
 they may be viewed as an arbritrary set of $N_m$ linearly independent functions
 defined over the survey volume.  Regardless of the choice of mode functions,
 the pixel values $y_i$ have zero mean: $\langle y_i \rangle = 0$.  (This is
-precisely true only if the mean number density is known exactly; if $\bar{n}$
-is estimated from data, this condition will hold only approximately.)
+precisely true if the mean number density is known exactly; if $\bar{n}$ is
+estimated from data, this condition will hold only approximately.)
 
 Our tracers are presumed to be discrete objects (\eg~galaxies), and therefore
 their observed clustering pattern is subject to Poisson shot noise:
