@@ -100,6 +100,35 @@ int Survey::GetGridIndex(double x1, double x2, double x3) const {
         return (d1*N2 + d2)*N3 + d3;
 }
 
+Config Survey::GetConfigurationOptions() const {
+    Config opts = cfg_new();
+    if(coordsys == CoordSysCartesian) {
+        cfg_set(opts, "coordsys", "cartesian");
+        cfg_set_double(opts, "XMin", XMin);
+        cfg_set_double(opts, "XMax", XMax);
+        cfg_set_double(opts, "YMin", YMin);
+        cfg_set_double(opts, "YMax", YMax);
+        cfg_set_double(opts, "ZMin", ZMin);
+        cfg_set_double(opts, "ZMax", ZMax);
+        cfg_set_int(opts, "Nx", Nx);
+        cfg_set_int(opts, "Ny", Ny);
+        cfg_set_int(opts, "Nz", Nz);
+    }
+    else if(coordsys == CoordSysSpherical) {
+        cfg_set(opts, "coordsys", "spherical");
+        cfg_set_double(opts, "RMin", RMin);
+        cfg_set_double(opts, "RMax", RMax);
+        cfg_set_double(opts, "MuMin", MuMin);
+        cfg_set_double(opts, "MuMax", MuMax);
+        cfg_set_double(opts, "PhiMin", PhiMin);
+        cfg_set_double(opts, "PhiMax", PhiMax);
+        cfg_set_int(opts, "Nr", Nr);
+        cfg_set_int(opts, "Nmu", Nmu);
+        cfg_set_int(opts, "Nphi", Nphi);
+    }
+    return opts;
+}
+
 
 /* If you create your own Survey sub-class, put the necessary #include
  * statement here and add a corresponding HANDLE_SURVEY() call below.  Your

@@ -12,7 +12,6 @@
   have separate logs per process, etc.
 - augment SplitFile to allow for specifying a maximum file size, honored by
   calls to SplitFile::write()
-- single klt executable, using either PARPACK or Anasazi, as available
 - single comma executable, using ScaLAPACK for matrix multiplication, but with
   option to output matrices in packed or full storage mode
 - single estimate executable, using ScaLAPACK
@@ -20,3 +19,6 @@
 - (IMPORTANT) Python program for generating run scripts, with prompts for all
   necessary options
 - put cell decomposition information into Survey class
+- allow for out-of-tree builds, and make this the default; external packages
+  (e.g. OpenBLAS, cfitsio, etc.) should also be built out-of-tree instead of
+  being placed in the code/ subdirectory

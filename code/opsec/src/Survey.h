@@ -1,6 +1,7 @@
 #ifndef SURVEY_H
 #define SURVEY_H
 
+#include <cstdio>
 #include <vector>
 
 #include "Cell.h"
@@ -48,6 +49,9 @@ public:
     /* Populate the vector 'gals' with the galaxies in the survey.  If the
      * supplied vector is non-empty, the galaxies are appended. */
     virtual void GetGalaxies(std::vector<Galaxy>& gals) = 0;
+
+    /* Return a configuration dictionary with all relevant options. */
+    virtual Config GetConfigurationOptions() const;
 
 public:
     /* Coordinate system flag, either CoordSysCartesian or CoordSysSpherical */

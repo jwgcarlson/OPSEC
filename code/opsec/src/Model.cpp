@@ -30,7 +30,7 @@ Model* InitializeModel(Config cfg) {
 
 #define HANDLE_MODEL(NAME) \
     if(strcmp(model, #NAME) == 0) { \
-        subcfg = cfg_new_sub(cfg, #NAME ".", 1); \
+        subcfg = cfg_new_sub(cfg, #NAME "."); \
         m = new NAME(subcfg); \
     }
 

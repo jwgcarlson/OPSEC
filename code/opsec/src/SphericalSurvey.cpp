@@ -169,6 +169,14 @@ void SphericalSurvey::GetGalaxies(std::vector<Galaxy>& gals) {
     fclose(fgals);
 }
 
+Config SphericalSurvey::GetConfigurationOptions() const {
+    Config opts = Survey::GetConfigurationOptions();
+    cfg_set(opts, "galfile", galfile.c_str());
+    cfg_set(opts, "maskfile", maskfile.c_str());
+    cfg_set(opts, "radial", radial.c_str());
+    return opts;
+}
+
 double SphericalSurvey::ComputeWeightedArea(long nside, float* mask) {
     assert(mask != NULL);
 

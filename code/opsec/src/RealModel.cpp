@@ -57,7 +57,7 @@ RealModel::RealModel(Config cfg) {
         }
         Nbands = bands.size();
     }
-    else if(cfg_has_keys(cfg, "Nbands,kmin,kmax", ",")) {
+    else if(cfg_has_keys(cfg, "Nbands,kmin,kmax")) {
         /* Use regularly spaced bands */
         Nbands = cfg_get_int(cfg, "Nbands");
         double kmin = cfg_get_double(cfg, "kmin");

@@ -18,10 +18,10 @@ public:
     ~BoxSurvey();
 
     /* Survey interface */
-    int GetCoordinateSystem() const;
-    SeparationFunc GetSeparationFunction();
-    SelectionFunc GetSelectionFunction();
-    void GetGalaxies(std::vector<Galaxy>& gals);
+    virtual SeparationFunc GetSeparationFunction();
+    virtual SelectionFunc GetSelectionFunction();
+    virtual void GetGalaxies(std::vector<Galaxy>& gals);
+    virtual Config GetConfigurationOptions() const;
 
 protected:
     std::string galfile;

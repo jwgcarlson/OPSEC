@@ -93,10 +93,6 @@ BoxSurvey::BoxSurvey(Config cfg)
 BoxSurvey::~BoxSurvey() {
 }
 
-int BoxSurvey::GetCoordinateSystem() const {
-    return CoordSysCartesian;
-}
-
 SeparationFunc BoxSurvey::GetSeparationFunction() {
     Point origin = { L/2, L/2, L/2 };
     return SeparationFunc(new BoxSeparationFuncImpl(L, origin));
@@ -134,4 +130,12 @@ void BoxSurvey::GetGalaxies(std::vector<Galaxy>& gals) {
         fprintf(stderr, "BoxSurvey: expecting %zd galaxies from '%s', got %zd\n", n, galfile.c_str(), nread);
 
     fclose(fgals);
+}
+
+Config BoxSurvey::GetConfigurationOptions() const {
+    Config opts = Survey::GetConfigurationOptions();
+    cfg_set(opts, "galfile", galfile.c_str());
+    cfg_set_double(opts, "nbar", nbar);
+    cfg_set_double(opts, "L", L);
+    return opts;
 }

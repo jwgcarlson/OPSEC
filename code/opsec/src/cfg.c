@@ -246,7 +246,7 @@ int cfg_read_line(Config cfg, const char* line) {
     p = line;
     end = &line[n];
 
-    /* Strip leading whitespace */
+    /* Trim leading whitespace */
     while(p != end && isspace(*p))
         p++;
 
@@ -261,13 +261,13 @@ int cfg_read_line(Config cfg, const char* line) {
         return CFG_PARSE_ERROR;
     }
 
-    /* Strip whitespace from key name */
+    /* Trim trailing whitespace from key name */
     keyend = eqpos;
     while(isspace(*(keyend - 1)))
         keyend--;
     key = my_strndup(p, keyend-p);
 
-    /* Strip whitespace (and optionally quotes) from value */
+    /* Trim whitespace (and optionally quotes) from value */
     valbegin = eqpos + 1;
     while(valbegin != end && isspace(*valbegin))
         valbegin++;
@@ -342,8 +342,8 @@ DEFINE_CFG_SET(uchar, unsigned char, "%c")
 DEFINE_CFG_SET(ushort, unsigned short, "%hu")
 DEFINE_CFG_SET(uint, unsigned int, "%u")
 DEFINE_CFG_SET(ulong, unsigned long, "%lu")
-DEFINE_CFG_SET(float, float, "%g")
-DEFINE_CFG_SET(double, double, "%g")
+DEFINE_CFG_SET(float, float, "%16.16g")
+DEFINE_CFG_SET(double, double, "%16.16g")
 #undef DEFINE_CFG_SET
 
 void cfg_set_printf(Config cfg, const char* key, const char* fmt, ...) {
@@ -359,21 +359,49 @@ int cfg_has_key(Config cfg, const char* key) {
     return cfg_find_entry(cfg, key, NULL, NULL) != NULL;
 }
 
-int cfg_missing_keys(Config cfg, const char* keys) {
+/* Trim whitespace from a string.  The string is modified in place, and a
+ * pointer to the start of the trimmed string is returned. */
+static char* trim_whitespace(char* s) {
+    int n;
+    while(isspace(*s))
+        s++;
+    n = strlen(s);
+    while(n > 0 && isspace(s[n-1]))
+        s[--n] = '\0';
+    return s;
+}
+
+int cfg_has_keys(Config cfg, const char* keys) {
+    const char* sep = CFG_COMMA;
+    int hasall = 1;
+    char* saveptr;
+    char* keys_copy = strdup(keys);
+    int keylen;
+    char* key = strtok_r(keys_copy, sep, &saveptr);
+    while(key != NULL) {
+        key = trim_whitespace(key);
+
+        /* Check for key */
+        if(!cfg_has_key(cfg, key))
+            hasall = 0;
+
+        key = strtok_r(NULL, sep, &saveptr);
+    }
+
+    free(keys_copy);
+    return hasall;
+}
+
+char* cfg_missing_keys(Config cfg, const char* keys) {
     const char* sep = CFG_COMMA;
     int num_missing = 0;
     char* missing = (char*) calloc(strlen(keys) + 1, sizeof(char));
     char* saveptr;
-    char* s = strdup(keys);
+    char* keys_copy = strdup(keys);
     int keylen;
-    char* key = strtok_r(s, sep, &saveptr);
+    char* key = strtok_r(keys_copy, sep, &saveptr);
     while(key != NULL) {
-        /* Trim whitespace from key */
-        while(isspace(*key))
-            key++;
-        keylen = strlen(key);
-        while(keylen > 0 && isspace(key[keylen-1]))
-            key[--keylen] = '\0';
+        key = trim_whitespace(key);
 
         /* Check for key, and append to missing list if not found */
         if(!cfg_has_key(cfg, key)) {
@@ -385,12 +413,13 @@ int cfg_missing_keys(Config cfg, const char* keys) {
         key = strtok_r(NULL, sep, &saveptr);
     }
 
+    free(keys_copy);
     if(num_missing > 0)
-        fprintf(stderr, "Missing %d keys: %s\n", num_missing, missing);
-
-    free(s);
-    free(missing);
-    return num_missing;
+        return missing;
+    else {
+        free(missing);
+        return NULL;
+    }
 }
 
 const char* cfg_get(Config cfg, const char* key) {

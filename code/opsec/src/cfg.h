@@ -8,6 +8,8 @@
  *       Nx = 100
  *       ...
  *     }
+ * - use a sorted dictionary, so entries can be read out in the same order
+ *   they were put in
  * */
 
 #ifdef __cplusplus
@@ -84,10 +86,15 @@ void cfg_set_printf(Config cfg, const char* key, const char* fmt, ...);
 /* Return 1 if the specified key exists, 0 otherwise */
 int cfg_has_key(Config cfg, const char* key);
 
-/* Return 0 if the specified keys exist, otherwise print an error message and
- * return the number of missing keys.  The argument 'keys' is a comma-separated
- * list of keys. */
-int cfg_missing_keys(Config cfg, const char* keys);
+/* Return 1 if the specified keys exist, 0 otherwise.  The argument 'keys' is
+ * a comma-separated list of keys to search for. */
+int cfg_has_keys(Config cfg, const char* keys);
+
+/* Return a string representing the list of missing keys out of those
+ * requested.  If no keys are missing, NULL is returned.  Otherwise, a
+ * malloc-allocated string is returned.  As above, the argument 'keys' is a
+ * comma-separated list of keys to search for. */
+char* cfg_missing_keys(Config cfg, const char* keys);
 
 /* Get the specified configuration option, without error checking */
 const char*    cfg_get       (Config cfg, const char* key);

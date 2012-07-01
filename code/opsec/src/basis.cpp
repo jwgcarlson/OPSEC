@@ -166,123 +166,38 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
     }
 
-    /* Initialize selection function */
+    /* Initialize survey */
     Survey* survey = InitializeSurvey(cfg);
     if(survey == NULL)
         opsec_exit(1);
     SelectionFunc nbar = survey->GetSelectionFunction();
+    int N1 = survey->N1;
+    int N2 = survey->N2;
+    int N3 = survey->N3;
 
     vector<Cell> cells;
     int Ncells = 0;
 
-    int N1, N2, N3;
-    double Min1, Max1, Min2, Max2, Min3, Max3;
-    Config opts = cfg_new();
-    if(coordsys == CoordSysSpherical) {
-        if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi,RMin,RMax,MuMin,MuMax,PhiMin,PhiMax", ",")) {
-            opsec_error("basis: must provide config options N{r,mu,phi} and {R,Mu,Phi}{Min,Max}\n");
-            opsec_exit(1);
-        }
-
-        N1 = cfg_get_int(cfg, "Nr");
-        N2 = cfg_get_int(cfg, "Nmu");
-        N3 = cfg_get_int(cfg, "Nphi");
-        Min1 = cfg_get_double(cfg, "RMin");
-        Max1 = cfg_get_double(cfg, "RMax");
-        Min2 = cfg_get_double(cfg, "MuMin");
-        Max2 = cfg_get_double(cfg, "MuMax");
-        Min3 = cfg_get_double(cfg, "PhiMin");
-        Max3 = cfg_get_double(cfg, "PhiMax");
-
-        fprintf(fcells, "# struct Cell {\n");
-        fprintf(fcells, "#     int a;\n");
-        fprintf(fcells, "#     int G;\n");
-        fprintf(fcells, "#     double rmin, rmax;\n");
-        fprintf(fcells, "#     double mumin, mumax;\n");
-        fprintf(fcells, "#     double phimin, phimax;\n");
-        fprintf(fcells, "#     double Veff;\n");
-        fprintf(fcells, "#     double Nbar;\n");
-        fprintf(fcells, "# };\n");
-
-        cfg_set(opts, "coordsys", "spherical");
-        cfg_set_int(opts, "Nr", N1);
-        cfg_set_int(opts, "Nmu", N2);
-        cfg_set_int(opts, "Nphi", N3);
-        cfg_set_double(opts, "RMin", Min1);
-        cfg_set_double(opts, "RMax", Max1);
-        cfg_set_double(opts, "MuMin", Min2);
-        cfg_set_double(opts, "MuMax", Max2);
-        cfg_set_double(opts, "PhiMin", Min3);
-        cfg_set_double(opts, "PhiMax", Max3);
-    }
-    else if(coordsys == CoordSysCartesian) {
-        if(!cfg_has_keys(cfg, "Nx,Ny,Nz,XMin,XMax,YMin,YMax,ZMin,ZMax", ",")) {
-            opsec_error("basis: must provide config options N{x,y,z} and {X,Y,Phi}{Z,Max}\n");
-            opsec_exit(1);
-        }
-
-        N1 = cfg_get_int(cfg, "Nx");
-        N2 = cfg_get_int(cfg, "Ny");
-        N3 = cfg_get_int(cfg, "Nz");
-        Min1 = cfg_get_double(cfg, "XMin");
-        Max1 = cfg_get_double(cfg, "XMax");
-        Min2 = cfg_get_double(cfg, "YMin");
-        Max2 = cfg_get_double(cfg, "YMax");
-        Min3 = cfg_get_double(cfg, "ZMin");
-        Max3 = cfg_get_double(cfg, "ZMax");
-
-        fprintf(fcells, "# struct Cell {\n");
-        fprintf(fcells, "#     int a;\n");
-        fprintf(fcells, "#     int G;\n");
-        fprintf(fcells, "#     double xmin, xmax;\n");
-        fprintf(fcells, "#     double ymin, ymax;\n");
-        fprintf(fcells, "#     double zmin, zmax;\n");
-        fprintf(fcells, "#     double Veff;\n");
-        fprintf(fcells, "#     double Nbar;\n");
-        fprintf(fcells, "# };\n");
-
-
-        cfg_set(opts, "coordsys", "cartesian");
-        cfg_set_int(opts, "Nx", N1);
-        cfg_set_int(opts, "Ny", N2);
-        cfg_set_int(opts, "Nz", N3);
-        cfg_set_double(opts, "XMin", Min1);
-        cfg_set_double(opts, "XMax", Max1);
-        cfg_set_double(opts, "YMin", Min2);
-        cfg_set_double(opts, "YMax", Max2);
-        cfg_set_double(opts, "ZMin", Min3);
-        cfg_set_double(opts, "ZMax", Max3);
-    }
-
     /* Populate list of cells */
-    Cell c;
-    #pragma omp parallel for private(c)
-    for(int d = 0; d < N1; d++) {
-        c.min1 = Min1 +     d*(Max1 - Min1)/N1;
-        c.max1 = Min1 + (d+1)*(Max1 - Min1)/N1;
-        for(int e = 0; e < N2; e++) {
-            c.min2 = Min2 +     e*(Max2 - Min2)/N2;
-            c.max2 = Min2 + (e+1)*(Max2 - Min2)/N2;
-            for(int f = 0; f < N3; f++) {
-                c.min3 = Min3 +     f*(Max3 - Min3)/N3;
-                c.max3 = Min3 + (f+1)*(Max3 - Min3)/N3;
-                c.G = N3*(N2*d + e) + f;
+    for(int d1 = 0; d1 < N1; d1++) {
+        for(int d2 = 0; d2 < N2; d2++) {
+            for(int d3 = 0; d3 < N3; d3++) {
+                Cell c = survey->CreateEmptyCell(d1, d2, d3);
 
                 if(FinalizeCell(coordsys, c, nbar)) {
-                    #pragma omp critical (cells_update)
-                    {
-                        c.a = Ncells++;
-                        cells.push_back(c);
-                    }
+                    c.a = Ncells++;
+                    cells.push_back(c);
                 }
             }
         }
     }
 
     opsec_info("Got %d non-empty cells out of %d possible.\n", Ncells, N1*N2*N3);
+
+    Config opts = survey->GetConfigurationOptions();
     cfg_set_int(opts, "Ncells", Ncells);
 
-    opsec_info("Writing cells to '%s'.\n", cellfile);
+    opsec_info("Writing cells to '%s'\n", cellfile);
     abn_write(fcells, &cells[0], Ncells, CELL_FMT_STRING, opts);
 
     fclose(fcells);
