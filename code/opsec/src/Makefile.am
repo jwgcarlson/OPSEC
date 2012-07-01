@@ -2,7 +2,9 @@ CC = $(MPICC)
 CXX = $(MPICXX)
 F77 = $(MPIF77)
 
-# Static convenience library.
+
+##### libklpk: static convenience library #####################################
+
 noinst_LTLIBRARIES = libklpk.la
 
 libklpk_la_SOURCES = \
@@ -22,7 +24,10 @@ libklpk_la_SOURCES = \
 #    KaiserModel.h   RealSplineModel.h   SzapudiModel.h   TestModel.h   XiModel.h
 libklpk_la_CXXFLAGS = $(OPENMP_CFLAGS)
 
-bin_PROGRAMS = basis comma comma-scalapack dot estimate estimate-mpi klt klt-anasazi
+
+##### Core OPSEC Binaries #####################################################
+
+bin_PROGRAMS = basis comma comma-scalapack dot estimate estimate-mpi klt
 
 basis_SOURCES = basis.cpp
 basis_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -50,13 +55,9 @@ estimate_mpi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(
 
 klt_SOURCES = klt.cpp
 klt_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
-
-klt_anasazi_SOURCES = klt-anasazi.cpp
-klt_anasazi_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
-                    $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
-                    $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
+klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
+            $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
+            $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 
 
 printflags:

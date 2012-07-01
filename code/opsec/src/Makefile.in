@@ -37,7 +37,7 @@ build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = basis$(EXEEXT) comma$(EXEEXT) comma-scalapack$(EXEEXT) \
 	dot$(EXEEXT) estimate$(EXEEXT) estimate-mpi$(EXEEXT) \
-	klt$(EXEEXT) klt-anasazi$(EXEEXT)
+	klt$(EXEEXT)
 subdir = src
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in TODO
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -124,21 +124,12 @@ klt_OBJECTS = $(am_klt_OBJECTS)
 klt_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-klt_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CXXLD) $(klt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
-am_klt_anasazi_OBJECTS = klt_anasazi-klt-anasazi.$(OBJEXT)
-klt_anasazi_OBJECTS = $(am_klt_anasazi_OBJECTS)
-klt_anasazi_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-klt_anasazi_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(klt_anasazi_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+klt_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CXXLD) $(klt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -163,10 +154,10 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) $(comma_SOURCES) \
 	$(comma_scalapack_SOURCES) $(dot_SOURCES) $(estimate_SOURCES) \
-	$(estimate_mpi_SOURCES) $(klt_SOURCES) $(klt_anasazi_SOURCES)
+	$(estimate_mpi_SOURCES) $(klt_SOURCES)
 DIST_SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) $(comma_SOURCES) \
 	$(comma_scalapack_SOURCES) $(dot_SOURCES) $(estimate_SOURCES) \
-	$(estimate_mpi_SOURCES) $(klt_SOURCES) $(klt_anasazi_SOURCES)
+	$(estimate_mpi_SOURCES) $(klt_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -321,7 +312,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
-# Static convenience library.
+##### libklpk: static convenience library #####################################
 noinst_LTLIBRARIES = libklpk.la
 libklpk_la_SOURCES = \
     Solver.h   AnasaziSolver.h   ParpackSolver.h \
@@ -360,12 +351,9 @@ estimate_mpi_CXXFLAGS = $(OPENMP_CFLAGS)
 estimate_mpi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 klt_SOURCES = klt.cpp
 klt_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
-klt_anasazi_SOURCES = klt-anasazi.cpp
-klt_anasazi_CXXFLAGS = $(OPENMP_CFLAGS)
-klt_anasazi_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
-                    $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
-                    $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
+klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
+            $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
+            $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 
 all: all-am
 
@@ -476,9 +464,6 @@ estimate-mpi$(EXEEXT): $(estimate_mpi_OBJECTS) $(estimate_mpi_DEPENDENCIES)
 klt$(EXEEXT): $(klt_OBJECTS) $(klt_DEPENDENCIES) 
 	@rm -f klt$(EXEEXT)
 	$(klt_LINK) $(klt_OBJECTS) $(klt_LDADD) $(LIBS)
-klt-anasazi$(EXEEXT): $(klt_anasazi_OBJECTS) $(klt_anasazi_DEPENDENCIES) 
-	@rm -f klt-anasazi$(EXEEXT)
-	$(klt_anasazi_LINK) $(klt_anasazi_OBJECTS) $(klt_anasazi_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -498,7 +483,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate-estimate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate_mpi-estimate-mpi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt-klt.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt_anasazi-klt-anasazi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-AnasaziSolver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-BoxSurvey.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-Cell.Plo@am__quote@
@@ -785,20 +769,6 @@ klt-klt.obj: klt.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='klt.cpp' object='klt-klt.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(klt_CXXFLAGS) $(CXXFLAGS) -c -o klt-klt.obj `if test -f 'klt.cpp'; then $(CYGPATH_W) 'klt.cpp'; else $(CYGPATH_W) '$(srcdir)/klt.cpp'; fi`
-
-klt_anasazi-klt-anasazi.o: klt-anasazi.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(klt_anasazi_CXXFLAGS) $(CXXFLAGS) -MT klt_anasazi-klt-anasazi.o -MD -MP -MF $(DEPDIR)/klt_anasazi-klt-anasazi.Tpo -c -o klt_anasazi-klt-anasazi.o `test -f 'klt-anasazi.cpp' || echo '$(srcdir)/'`klt-anasazi.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/klt_anasazi-klt-anasazi.Tpo $(DEPDIR)/klt_anasazi-klt-anasazi.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='klt-anasazi.cpp' object='klt_anasazi-klt-anasazi.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(klt_anasazi_CXXFLAGS) $(CXXFLAGS) -c -o klt_anasazi-klt-anasazi.o `test -f 'klt-anasazi.cpp' || echo '$(srcdir)/'`klt-anasazi.cpp
-
-klt_anasazi-klt-anasazi.obj: klt-anasazi.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(klt_anasazi_CXXFLAGS) $(CXXFLAGS) -MT klt_anasazi-klt-anasazi.obj -MD -MP -MF $(DEPDIR)/klt_anasazi-klt-anasazi.Tpo -c -o klt_anasazi-klt-anasazi.obj `if test -f 'klt-anasazi.cpp'; then $(CYGPATH_W) 'klt-anasazi.cpp'; else $(CYGPATH_W) '$(srcdir)/klt-anasazi.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/klt_anasazi-klt-anasazi.Tpo $(DEPDIR)/klt_anasazi-klt-anasazi.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='klt-anasazi.cpp' object='klt_anasazi-klt-anasazi.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(klt_anasazi_CXXFLAGS) $(CXXFLAGS) -c -o klt_anasazi-klt-anasazi.obj `if test -f 'klt-anasazi.cpp'; then $(CYGPATH_W) 'klt-anasazi.cpp'; else $(CYGPATH_W) '$(srcdir)/klt-anasazi.cpp'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
