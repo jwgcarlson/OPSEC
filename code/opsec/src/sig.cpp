@@ -1,15 +1,8 @@
-/* TODO: - refactor ComputeSignalMatrixS() to avoid 6-deep nested for loop.
- *       - parallelize ComputeSignalMatrixS() in the same fashion as
- *         ComputeSignalMatrixC()
- *       - explain algorithm in more detail (in particular all the extra
+/* TODO: - comment algorithm in more detail (in particular all the extra
  *         book-keeping involved to exploit azimuthal symmetry) */
 
 #ifdef HAVE_CONFIG_H
 #  include <opsec_config.h>
-#endif
-
-#ifdef _OPENMP
-#  include <omp.h>
 #endif
 
 #include <cassert>
@@ -54,7 +47,7 @@ void ComputeSignalMatrixBlock(
         int Ncells, const vector<int>& rows, const vector<int>& cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        const Cell* cells, int N1, int N2, int N3,
+        const Cell* cells,
         double epsrel, double epsabs)
 {
     if(lld <= 0)
@@ -65,9 +58,11 @@ void ComputeSignalMatrixBlock(
     }
     int coordsys = survey->GetCoordinateSystem();
     if(coordsys == CoordSysCartesian)
-        ComputeSignalMatrixBlockC(Ncells, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+        ComputeSignalMatrixBlockC(Ncells, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0],
+                                  s, lld, xi, survey, cells, epsrel, epsabs);
     else if(coordsys == CoordSysSpherical)
-        ComputeSignalMatrixBlockS(Ncells, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0], s, lld, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+        ComputeSignalMatrixBlockS(Ncells, (int) rows.size(), &rows[0], (int) cols.size(), &cols[0],
+                                  s, lld, xi, survey, cells, epsrel, epsabs);
 }
 
 /* Parameters:
@@ -84,44 +79,41 @@ void ComputeSignalMatrixBlockC(
         int Ncells, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        const Cell* cells, int Nx, int Ny, int Nz,
+        const Cell* cells,
         double epsrel, double epsabs)
 {
+    SeparationFunc sep = survey->GetSeparationFunction();
+    int Nx = survey->Nx;
+    int Ny = survey->Ny;
+    int Nz = survey->Nz;
+
     /* The matrix element for cells a and b depends only on the relative
      * positions of the cells:
-     *   kd = abs(da - db), ke = abs(ea - eb), kf = abs(fa - fb)
+     *   kx = abs(a.dx - b.dx), ky = abs(a.dy - b.dy), kz = abs(a.dz - b.dz)
      * We keep a cache of already computed matrix elements and use it whenever
      * possible. */
     const real uninitialized = -1e100;  // unphysical value used to indicate an uninitialized element
     vector<real> cache(Nx*Ny*Nz, uninitialized);
 
-    SeparationFunc sep = survey->GetSeparationFunction();
-
-//    #pragma omp parallel for
     for(int i = 0; i < nrows; i++) {
         int a = rows[i];
-        int da = cells[a].G / (Ny*Nz);
-        int ea = (cells[a].G / Nz) % Ny;
-        int fa = cells[a].G % Nz;
+        const Cell& ca = cells[a];
         for(int j = 0; j < ncols; j++) {
             int b = cols[j];
-            int db = cells[b].G / (Ny*Nz);
-            int eb = (cells[b].G / Nz) % Ny;
-            int fb = cells[b].G % Nz;
+            const Cell& cb = cells[b];
 
-            int kd = abs(da - db);
-            int ke = abs(ea - eb);
-            int kf = abs(fa - fb);
-            int k = (kd*Ny + ke)*Nz + kf;
+            int kx = abs(ca.dx - cb.dx);
+            int ky = abs(ca.dy - cb.dy);
+            int kz = abs(ca.dz - cb.dz);
+            int k = (kx*Ny + ky)*Nz + kz;
 
             real Q = cache[k];
             if(Q == uninitialized) {
-                Q = (a <= b) ? ComputeSignalC(cells[a], cells[b], xi, sep, epsrel, epsabs)
-                             : ComputeSignalC(cells[b], cells[a], xi, sep, epsrel, epsabs);
-                cache[k] = Q;
+                Q = cache[k] = (a <= b) ? ComputeSignalC(ca, cb, xi, sep, epsrel, epsabs)
+                                        : ComputeSignalC(cb, ca, xi, sep, epsrel, epsabs);
             }
 
-            s[i*lld + j] = sqrt(cells[a].Nbar * cells[b].Nbar) * Q;
+            s[i*lld + j] = sqrt(ca.Nbar * cb.Nbar) * Q;
         }
     }
 }
@@ -130,10 +122,13 @@ void ComputeSignalMatrixBlockS(
         int Ncells, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        const Cell* cells, int Nr, int Nmu, int Nphi,
+        const Cell* cells,
         double epsrel, double epsabs)
 {
     SeparationFunc sep = survey->GetSeparationFunction();
+    int Nr = survey->Nr;
+    int Nmu = survey->Nmu;
+    int Nphi = survey->Nphi;
 
     const real uninitialized = -1e100;  // arbitrary magic number
 
@@ -149,10 +144,10 @@ void ComputeSignalMatrixBlockS(
             s[i + j*lld] = uninitialized;
 
     /* Rearrange cells into a set of "arcs".  Each arc is a sequence of cells
-     * at fixed r and mu, labeled by h = d*Nmu + e. */
+     * at fixed r and mu, labeled by h = dr*Nmu + dmu. */
     vector<vector<int> > arcs(Nr*Nmu);
     for(int a = 0; a < Ncells; a++) {
-        int h = cells[a].G / Nphi;
+        int h = cells[a].dr*Nmu + cells[a].dmu;
         arcs[h].push_back(a);
     }
 
@@ -177,33 +172,31 @@ void ComputeSignalMatrixBlockS(
                 cache[k] = uninitialized;
 
             /* For fixed arcs ha and hb, iterate over cell pairs */
-//            #pragma omp parallel for
             for(int ia = 0; ia < na; ia++) {
                 int a = acells[ia];
+                const Cell& ca = cells[a];
                 int i = rows_g2l[a];
                 if(i < 0)
                     continue;
 
                 for(int ib = 0; ib < nb; ib++) {
                     int b = bcells[ib];
+                    const Cell& cb = cells[b];
                     int j = cols_g2l[b];
                     if(j < 0)
                         continue;
 
                     /* Compute matrix element only if it cannot be determined
                      * by symmetry with a previously computed element */
-                    int fa = cells[a].G % Nphi;
-                    int fb = cells[b].G % Nphi;
-                    int k = abs(fa - fb);
+                    int k = abs(ca.dphi - cb.dphi);
                     real Q = cache[k];
                     if(Q == uninitialized) {
                         /* Update cache element */
-                        Q = (a <= b) ? ComputeSignalS(cells[a], cells[b], xi, sep, epsrel, epsabs)
-                                     : ComputeSignalS(cells[b], cells[a], xi, sep, epsrel, epsabs);
-                        cache[k] = Q;
+                        Q = cache[k] = (a <= b) ? ComputeSignalS(ca, cb, xi, sep, epsrel, epsabs)
+                                                : ComputeSignalS(cb, ca, xi, sep, epsrel, epsabs);
                     }
                     /* Set S_{ab} = \sqrt{\Nbar_a \Nbar_b} Q_{ab} */
-                    s[i*lld + j] = sqrt(cells[a].Nbar * cells[b].Nbar) * Q;
+                    s[i*lld + j] = sqrt(ca.Nbar * cb.Nbar) * Q;
                 }
             }
         }
@@ -274,6 +267,7 @@ double ComputeSignalS(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
 }
 #endif
 
+#if 0
 real* ComputeSignalMatrixS(
     size_t n, size_t nloc, int amin, const Cell* cells,
     int Nr, int Nmu, int Nphi, const XiFunc& xi, Survey* survey,
@@ -378,6 +372,7 @@ real* ComputeSignalMatrixS(
 
     return S;
 }
+#endif
 
 struct CubatureData {
     double min[6];
@@ -554,6 +549,7 @@ double ComputeSignalC(const Cell& c1, const Cell& c2, const XiFunc& xi, const Se
 }
 #endif
 
+#if 0
 real* ComputeSignalMatrixC(
     size_t n, size_t nloc, int amin,
     const Cell* cells,
@@ -616,6 +612,7 @@ real* ComputeSignalMatrixC(
 
     return S;
 }
+#endif
 
 FILE* ReadModesHeader(const char* modefile, int* Nmodes_, int* Ncells_) {
     /* Read in spectrum from file */
@@ -647,13 +644,15 @@ real* ReadModes(const char* modefile, int* Nmodes_, int* Ncells_) {
     int Nmodes = -1;
     int Ncells = -1;
     real* modes = NULL;
-    int nread;
 
-    int me = 0, usempi = 0;
+    int nprocs = 1, me = 0;
 #ifdef OPSEC_USE_MPI
-    MPI_Initialized(&usempi);
-    if(usempi)
+    int ready;
+    MPI_Initialized(&ready);
+    if(ready) {
+        MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
         MPI_Comm_rank(MPI_COMM_WORLD, &me);
+    }
 #endif
 
     /* Read in spectrum from file on the root process */
@@ -662,12 +661,13 @@ real* ReadModes(const char* modefile, int* Nmodes_, int* Ncells_) {
         if(fp != NULL) {
             modes = (real*) opsec_malloc(Nmodes*Ncells*sizeof(real));
             if(modes == NULL)
-                fprintf(stderr, "ReadModes: could not allocate %zd bytes of memory\n", Nmodes*Ncells*sizeof(real));
+                opsec_error("ReadModes: could not allocate %zd bytes of memory\n", Nmodes*Ncells*sizeof(real));
             else {
                 if(fread(modes, sizeof(real), Nmodes*Ncells, fp) != Nmodes*Ncells) {
-                    fprintf(stderr, "ReadModes: error reading data from '%s'\n", modefile);
+                    opsec_error("ReadModes: error reading data from '%s'\n", modefile);
                     free(modes);
                     modes = NULL;
+                    Nmodes = 0;
                 }
             }
             fclose(fp);
@@ -676,7 +676,7 @@ real* ReadModes(const char* modefile, int* Nmodes_, int* Ncells_) {
 
 #ifdef OPSEC_USE_MPI
     /* Broadcast spectrum to other processes */
-    if(usempi) {
+    if(nprocs > 1) {
         MPI_Bcast(&Nmodes, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&Ncells, 1, MPI_INT, 0, MPI_COMM_WORLD);
         if(Nmodes > 0) {

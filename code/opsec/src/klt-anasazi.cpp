@@ -45,6 +45,8 @@
 #include <cstring>
 #include <string>
 #include <vector>
+using std::string;
+using std::vector;
 
 #include <mpi.h>
 
@@ -72,35 +74,25 @@ const char* usage =
     "  modefile=FILE  Write mode function coefficients to FILE (required)\n"
     "  evalfile=FILE  Write S/N eigenvalues to FILE (required)\n"
     "  model=NAME     Use specified model (required)\n"
-    "  coordsys=TYPE  Coordinate system; either spherical or cartesian (required)\n"
-    "  Nr,Nmu,Nphi    Spherical grid (required if coordsys = spherical)\n"
-    "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n"
-    "  solver=NAME    Use specified eigensolver (arpack or anasazi)\n"
+    "  solver=NAME    Use specified eigensolver (currently parpack or anasazi)\n"
 ;
 
+/* Helper class for computing local signal matrix elements. */
 class SignalMatrixFactory : public MatrixFactory {
 public:
-    SignalMatrixFactory(int Ncells, const XiFunc& xi, Survey* survey,
-                        const Cell* cells, int N1, int N2, int N3,
-                        double epsrel = 1e-5, double epsabs = 1e-10)
-        : Ncells(Ncells), xi(xi), survey(survey), cells(cells),
-          N1(N1), N2(N2), N3(N3), epsrel(epsrel), epsabs(epsabs)
+    SignalMatrixFactory(const XiFunc& xi, Survey* survey, int Ncells, const Cell* cells, double epsrel = 1e-5, double epsabs = 1e-10)
+        : xi(xi), survey(survey), Ncells(Ncells), cells(cells), epsrel(epsrel), epsabs(epsabs)
     {}
 
-    void ComputeMatrixValues(const std::vector<int>& rows,
-                             const std::vector<int>& cols,
-                             real* values, int lld)
-    {
-        ComputeSignalMatrixBlock(Ncells, rows, cols, values, lld, xi, survey,
-                                 cells, N1, N2, N3, epsrel, epsabs);
+    void ComputeMatrixValues(const vector<int>& rows, const vector<int>& cols, real* values, int lld) {
+        ComputeSignalMatrixBlock(Ncells, rows, cols, values, lld, xi, survey, cells, epsrel, epsabs);
     }
 
 private:
-    int Ncells;
     const XiFunc& xi;
     Survey* survey;
+    int Ncells;
     const Cell* cells;
-    int N1, N2, N3;
     double epsrel, epsabs;
 };
 
@@ -118,44 +110,27 @@ int main(int argc, char* argv[]) {
     Config cfg = opsec_init(argc, argv, usage);
 
     /* Make sure all the necessary options are provided */
-    if(!cfg_has_keys(cfg, "coordsys,cellfile,Nmodes,modefile,evalfile", ",")) {
+    if(cfg_missing_keys(cfg, "cellfile,Nmodes,modefile,evalfile")) {
         if(me == 0) opsec_error("klt: missing configuration options\n");
         if(me == 0) fputs(usage, stderr);
         opsec_exit(1);
-    }
-
-    int coordsys = cfg_get_enum(cfg, "coordsys", "cartesian", CoordSysCartesian,
-                                                 "spherical", CoordSysSpherical,
-                                                 "", -1);
-    if(coordsys == -1) {
-        opsec_error("klt: missing or invalid config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
-        opsec_exit(1);
-    }
-
-    int N1, N2, N3;
-    if(coordsys == CoordSysCartesian) {
-        if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
-            fprintf(stderr, "klt: must provide config options N{x,y,z}\n");
-            opsec_exit(1);
-        }
-        N1 = cfg_get_int(cfg, "Nx");
-        N2 = cfg_get_int(cfg, "Ny");
-        N3 = cfg_get_int(cfg, "Nz");
-    }
-    else if(coordsys == CoordSysSpherical) {
-        if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi", ",")) {
-            fprintf(stderr, "klt: must provide config options N{r,mu,phi}\n");
-            opsec_exit(1);
-        }
-        N1 = cfg_get_int(cfg, "Nr");
-        N2 = cfg_get_int(cfg, "Nmu");
-        N3 = cfg_get_int(cfg, "Nphi");
     }
 
     const char* cellfile = cfg_get(cfg, "cellfile");
     const char* modefile = cfg_get(cfg, "modefile");
     const char* evalfile = cfg_get(cfg, "evalfile");
     int Nmodes = cfg_get_int(cfg, "Nmodes");
+
+    /* Read cells from file */
+    int Ncells;
+    Cell* cells = ReadCells(cellfile, &Ncells);
+    if(cells == NULL)
+        opsec_exit(1);
+
+    if(Nmodes > Ncells) {
+        if(me == 0) opsec_error("klt: requesting %d modes from a %d-dimensional space\n", Nmodes, Ncells);
+        opsec_exit(1);
+    }
 
     /* Load model */
     Model* model = InitializeModel(cfg);
@@ -184,25 +159,14 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /* Read cells from file */
-    int Ncells;
-    Cell* cells = ReadCells(cellfile, &Ncells);
-    if(cells == NULL)
-        opsec_exit(1);
-
-    if(Nmodes > Ncells) {
-        if(me == 0) opsec_error("klt: requesting %d modes from a %d-dimensional space\n", Nmodes, Ncells);
-        opsec_exit(1);
-    }
-
     /* Create matrix factory */
     double epsrel = cfg_has_key(cfg, "sig.epsrel") ? cfg_get_double(cfg, "sig.epsrel") : 1e-5;
     double epsabs = cfg_has_key(cfg, "sig.epsabs") ? cfg_get_double(cfg, "sig.epsabs") : 1e-10;
-    SignalMatrixFactory matfact(Ncells, xi, survey, cells, N1, N2, N3, epsrel, epsabs);
+    SignalMatrixFactory matfact(Ncells, xi, survey, cells, epsrel, epsabs);
 
     /* Select eigensolver */
     Solver* solver = NULL;
-    std::string s = cfg_get(cfg, "solver");
+    string s = cfg_get(cfg, "solver");
     if(s == "parpack") {
 #ifdef HAVE_PARPACK
         /* TODO: parse klt.parpack.* options and pass to solver */
@@ -229,13 +193,13 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
     }
 
-    /* Solve for Nmodes eigenvalue/eigenvectors */
+    /* Solve for Nmodes eigenvalues/eigenvectors */
     int nconv = solver->Solve(Nmodes);
 
     /* Check for errors */
     if(nconv < Nmodes) {
         if(me == 0)
-            opsec_error("klt: not all eigenvalues converged: Nmodes = %d, nconv = %d\n", Nmodes, nconv);
+            opsec_error("klt: not all eigenvalues converged (%d, %d)\n", Nmodes, nconv);
     }
 
     /* Prepare headers in output files */
@@ -268,10 +232,7 @@ int main(int argc, char* argv[]) {
     slp::Descriptor* rdesc = pcontext->new_descriptor(Ncells, 1, Ncells, 1);
     real* rvalues = (real*) opsec_malloc(rdesc->local_size() * sizeof(real));
     slp::Matrix<real> r(rdesc, &rvalues[0]);
-    if(me == 0)
-        assert(rdesc->num_local_rows() == Ncells);
-    else
-        assert(rdesc->num_local_rows() == 0);
+    opsec_assert(rdesc->num_local_rows() == (me == 0 ? Ncells : 0));
 
     /* Gather eigenvectors to root process and write to file */
     for(int j = 0; j < nconv; j++) {
@@ -295,10 +256,12 @@ int main(int argc, char* argv[]) {
     delete rdesc;
     delete solver;
     delete model;
-    free(cells);
     delete survey;
+    free(cells);
     cfg_destroy(cfg);
+#ifdef OPSEC_USE_MPI
     MPI_Finalize();
+#endif
 
     return 0;
 }

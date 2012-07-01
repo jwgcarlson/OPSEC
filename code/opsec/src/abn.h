@@ -108,15 +108,17 @@ int abn_read(FILE *stream, void** ptr, size_t* n, size_t* size, char* endian, ch
  * immediately after the header, ready to fread() the binary data. */
 int abn_read_header(FILE *stream, size_t* n, size_t* size, char* endian, char* fmt, Config opts);
 
-/* Utility routine. Return 'L' if machine is little endian, 'B' if big endian. */
+/* Utility routine.  Return 'L' if host machine is little endian, 'B' if big
+ * endian. */
 char abn_endian();
 
-/* Utility routine. Return the size (in bytes) of the specified data struct, or
- * a negative number if the format string is invalid. */
+/* Utility routine.  Return the size (in bytes) of the specified data struct,
+ * or a negative number if the format string is invalid. */
 int abn_calcsize(const char* fmt);
 
-/* Utility routine. */
-void abn_byte_swap(char* ptr, size_t n, const char* fmt);
+/* Utility routine.  Perform byte swapping on the given data, which consists
+ * of 'n' elements each of the type specified by the format string. */
+void abn_byte_swap(char* data, size_t n, const char* fmt);
 
 #ifdef __cplusplus
 }

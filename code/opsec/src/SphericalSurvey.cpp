@@ -81,7 +81,9 @@ struct SphericalSelectionFuncImpl : public SelectionFuncImpl {
 };
 
 
-SphericalSurvey::SphericalSurvey(Config cfg) {
+SphericalSurvey::SphericalSurvey(Config cfg)
+    : Survey(CoordSysSpherical, cfg)
+{
     galfile = cfg_get(cfg, "galfile");
     maskfile = cfg_get(cfg, "maskfile");
     radial = cfg_get(cfg, "radial");
@@ -90,10 +92,6 @@ SphericalSurvey::SphericalSurvey(Config cfg) {
 SphericalSurvey::~SphericalSurvey() {
 }
 
-
-int SphericalSurvey::GetCoordinateSystem() const {
-    return CoordSysSpherical;
-}
 
 SeparationFunc SphericalSurvey::GetSeparationFunction() {
     return SeparationFunc(new SphericalSeparationFuncImpl());

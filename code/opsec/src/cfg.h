@@ -2,7 +2,12 @@
 #define CFG_H
 
 /* TODO:
- * - rename cfg_set_format to cfg_set_printf and add cfg_get_scanf
+ * - allow for configuration blocks, e.g.
+ *     survey {
+ *       type = BoxSurvey
+ *       Nx = 100
+ *       ...
+ *     }
  * */
 
 #ifdef __cplusplus
@@ -24,6 +29,10 @@ extern "C" {
 #define CFG_FILE_ERROR 4
 #define CFG_PARSE_ERROR 5
 
+/* Delimiters/separators */
+#define CFG_DOT "."
+#define CFG_COMMA ","
+
 /* Opaque data type for configuration databases */
 typedef struct _Config*  Config;
 
@@ -38,9 +47,9 @@ Config cfg_new_from_stream(FILE* f);
 Config cfg_new_copy(Config orig);
 
 /* Create a new configuration database from an existing one, keeping only those
- * entries that begin with the specified prefix.  If 'strip' is nonzero, the
- * prefix will be stripped from all entries. */
-Config cfg_new_sub(Config cfg, const char* prefix, int strip);
+ * entries that begin with the specified prefix, and stripping off that prefix
+ * from all entries. */
+Config cfg_new_sub(Config cfg, const char* prefix);
 
 /* Destroy a configuration database and free all associated memory */
 void cfg_destroy(Config cfg);
@@ -70,11 +79,15 @@ void cfg_set_uint  (Config cfg, const char* key, unsigned int value);
 void cfg_set_ulong (Config cfg, const char* key, unsigned long value);
 void cfg_set_float (Config cfg, const char* key, float value);
 void cfg_set_double(Config cfg, const char* key, double value);
-void cfg_set_format(Config cfg, const char* key, const char* fmt, ...);
+void cfg_set_printf(Config cfg, const char* key, const char* fmt, ...);
 
 /* Return 1 if the specified key exists, 0 otherwise */
 int cfg_has_key(Config cfg, const char* key);
-int cfg_has_keys(Config cfg, const char* keys, const char* sep);
+
+/* Return 0 if the specified keys exist, otherwise print an error message and
+ * return the number of missing keys.  The argument 'keys' is a comma-separated
+ * list of keys. */
+int cfg_missing_keys(Config cfg, const char* keys);
 
 /* Get the specified configuration option, without error checking */
 const char*    cfg_get       (Config cfg, const char* key);
@@ -88,8 +101,7 @@ unsigned int   cfg_get_uint  (Config cfg, const char* key);
 unsigned long  cfg_get_ulong (Config cfg, const char* key);
 float          cfg_get_float (Config cfg, const char* key);
 double         cfg_get_double(Config cfg, const char* key);
-
-int cfg_get_format(Config cfg, const char* key, const char* fmt, ...);
+int            cfg_get_scanf (Config cfg, const char* key, const char* fmt, ...);
 
 /* Parse the given configuration option as an array of length at most nmax.
  * Return the number of values actually read. */

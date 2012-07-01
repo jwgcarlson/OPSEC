@@ -171,7 +171,7 @@ Config cfg_new_copy(Config orig) {
     return cfg;
 }
 
-Config cfg_new_sub(Config cfg, const char* prefix, int strip) {
+Config cfg_new_sub(Config cfg, const char* prefix) {
     int prefixlen = strlen(prefix);
     ConfigEntry entry;
     Config subcfg = cfg_new();
@@ -179,10 +179,7 @@ Config cfg_new_sub(Config cfg, const char* prefix, int strip) {
     entry = cfg->first;
     while(entry != NULL) {
         if(strncmp(entry->key, prefix, prefixlen) == 0) {
-            if(strip)
-                cfg_insert_entry(subcfg, strdup(entry->key + prefixlen), strdup(entry->value));
-            else
-                cfg_insert_entry(subcfg, strdup(entry->key), strdup(entry->value));
+            cfg_insert_entry(subcfg, strdup(entry->key + prefixlen), strdup(entry->value));
         }
         entry = entry->next;
     }
@@ -349,7 +346,7 @@ DEFINE_CFG_SET(float, float, "%g")
 DEFINE_CFG_SET(double, double, "%g")
 #undef DEFINE_CFG_SET
 
-void cfg_set_format(Config cfg, const char* key, const char* fmt, ...) {
+void cfg_set_printf(Config cfg, const char* key, const char* fmt, ...) {
     char valbuf[CFG_MAX_VALUE_LENGTH];
     va_list ap;
     va_start(ap, fmt);
@@ -362,16 +359,38 @@ int cfg_has_key(Config cfg, const char* key) {
     return cfg_find_entry(cfg, key, NULL, NULL) != NULL;
 }
 
-int cfg_has_keys(Config cfg, const char* keys, const char* sep) {
-    int hasall = 1;
+int cfg_missing_keys(Config cfg, const char* keys) {
+    const char* sep = CFG_COMMA;
+    int num_missing = 0;
+    char* missing = (char*) calloc(strlen(keys) + 1, sizeof(char));
+    char* saveptr;
     char* s = strdup(keys);
-    char* token = strtok(s, sep);
-    while(token != NULL) {
-        hasall &= cfg_has_key(cfg, token);
-        token = strtok(NULL, sep);
+    int keylen;
+    char* key = strtok_r(s, sep, &saveptr);
+    while(key != NULL) {
+        /* Trim whitespace from key */
+        while(isspace(*key))
+            key++;
+        keylen = strlen(key);
+        while(keylen > 0 && isspace(key[keylen-1]))
+            key[--keylen] = '\0';
+
+        /* Check for key, and append to missing list if not found */
+        if(!cfg_has_key(cfg, key)) {
+            num_missing++;
+            strcat(missing, sep);
+            strcat(missing, key);
+        }
+
+        key = strtok_r(NULL, sep, &saveptr);
     }
+
+    if(num_missing > 0)
+        fprintf(stderr, "Missing %d keys: %s\n", num_missing, missing);
+
     free(s);
-    return hasall;
+    free(missing);
+    return num_missing;
 }
 
 const char* cfg_get(Config cfg, const char* key) {
@@ -425,7 +444,7 @@ DEFINE_CFG_GET_ARRAY(float, float, "%f")
 DEFINE_CFG_GET_ARRAY(double, double, "%lf")
 #undef DEFINE_CFG_GET_ARRAY
 
-int cfg_get_format(Config cfg, const char* key, const char* fmt, ...) {
+int cfg_get_scanf(Config cfg, const char* key, const char* fmt, ...) {
     int nread;
     va_list ap;
     const char* s = cfg_get(cfg, key);

@@ -57,8 +57,9 @@
 
 /* Coordinate system options. */
 enum {
-    CoordSysCartesian = 0,
-    CoordSysSpherical = 1
+    CoordSysUndefined = 0,
+    CoordSysCartesian = 1,
+    CoordSysSpherical = 2
 };
 
 /* A point in either Cartesian or spherical coordinates. */
@@ -69,20 +70,33 @@ struct Point {
 };
 
 
-/* Abuse anonymous unions to allow the same struct to represent either a
- * spherical cell or a Cartesian cell. */
+/* Structure representing a non-empty cell within the survey grid. */
 struct Cell {
-    int a;                      // cell number (0 <= a < Ncells)
-    int G;                      // cell location within grid (0 <= G < N1*N2*N3)
+    /* Cell number within list of non-empty cells: 0 <= a < Ncells */
+    int a;
+
+    /* Cell index within survey grid: 0 <= d1 < N1, 0 <= d2 < N2, 0 <= d3 < N3 */
+    union { int d1; int dx; int dr; };
+    union { int d2; int dy; int dmu; };
+    union { int d3; int dz; int dphi; };
+
+    /* Cell bounds */
     union { double min1; double xmin; double rmin; };
     union { double max1; double xmax; double rmax; };
     union { double min2; double ymin; double mumin; };
     union { double max2; double ymax; double mumax; };
     union { double min3; double zmin; double phimin; };
     union { double max3; double zmax; double phimax; };
-    double Veff;                // effective volume of cell
-    double Nbar;                // expected number of galaxies within cell (Nbar = \int_V \bar{n} dV)
+
+    /* Effective cell volume */
+    double Veff;
+
+    /* Expected number of galaxies within cell: $\bar{N} = \int_V \bar{n} dV$ */
+    double Nbar;
 };
+
+/* ABN format string for cells. */
+#define CELL_FMT_STRING "4i8d"
 
 Cell* ReadCells(const char* cellfile, int* Ncells);
 

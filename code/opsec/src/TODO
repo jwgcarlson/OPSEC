@@ -1,5 +1,3 @@
-- allow for multi-file reading/writing in abn code, i.e. to split large files
-  up into multiple smaller files
 - write more unit tests (especially for models)
 - update usage strings in all programs
 - figure out runtime scaling for each program, and write a utility to predict
@@ -12,7 +10,13 @@
   structs inherit from BaseImpl base class
 - clean up logging interface; add ability to log to file (emulating tee), to
   have separate logs per process, etc.
-- figure out how to forward declare FILE in SplitFile.h
 - augment SplitFile to allow for specifying a maximum file size, honored by
   calls to SplitFile::write()
-- DistributedMatrix class using ScaLAPACK
+- single klt executable, using either PARPACK or Anasazi, as available
+- single comma executable, using ScaLAPACK for matrix multiplication, but with
+  option to output matrices in packed or full storage mode
+- single estimate executable, using ScaLAPACK
+- prefix all OPSEC programs with "opsec-"
+- (IMPORTANT) Python program for generating run scripts, with prompts for all
+  necessary options
+- put cell decomposition information into Survey class

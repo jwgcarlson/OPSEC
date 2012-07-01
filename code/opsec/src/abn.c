@@ -6,6 +6,7 @@
 #include "abn.h"
 
 /* TODO: use types of guaranteed size (i.e. int32 instead of int) */
+/* TODO: make this robust against malformed format strings */
 
 char abn_endian() {
     int x = 1;

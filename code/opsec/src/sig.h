@@ -21,35 +21,35 @@ void ComputeSignalMatrixBlock(
         int Ncells, const std::vector<int>& rows, const std::vector<int>& cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        const Cell* cells, int N1, int N2, int N3,
+        const Cell* cells,
         double epsrel = 1e-5, double epsabs = 1e-10);
 
 void ComputeSignalMatrixBlockC(
         int Ncells, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        const Cell* cells, int Nx, int Ny, int Nz,
+        const Cell* cells,
         double epsrel = 1e-5, double epsabs = 1e-10);
 void ComputeSignalMatrixBlockS(
         int n, int nrows, const int* rows, int ncols, const int* cols,
         real* s, int lld,
         const XiFunc& xi, Survey* survey,
-        const Cell* cells, int Nr, int Nmu, int Nphi,
+        const Cell* cells,
         double epsrel = 1e-5, double epsabs = 1e-10);
 
 /* Compute the local nloc-by-n block of the n-by-n signal matrix, starting at
  * row amin.  Assume spherical coordinates, and use azimuthal symmetry to
  * minimize computation. */
-real* ComputeSignalMatrixS(size_t n, size_t nloc, int amin, const Cell* cells,
-                           int Nr, int Nmu, int Nphi, const XiFunc& xi, Survey* survey,
-                           double epsrel = 1e-5, double epsabs = 1e-10);
+//real* ComputeSignalMatrixS(size_t n, size_t nloc, int amin, const Cell* cells,
+//                           int Nr, int Nmu, int Nphi, const XiFunc& xi, Survey* survey,
+//                           double epsrel = 1e-5, double epsabs = 1e-10);
 
 /* Compute the local nloc-by-n block of the n-by-n signal matrix, starting at
  * row amin.  Assume Cartesian coordinates and translational symmetry (real
  * space, not redshift space) to minimize computation. */
-real* ComputeSignalMatrixC(size_t n, size_t nloc, int amin, const Cell* cells,
-                           int Nx, int Ny, int Nz, const XiFunc& xi, Survey* survey,
-                           double epsrel = 1e-5, double epsabs = 1e-10);
+//real* ComputeSignalMatrixC(size_t n, size_t nloc, int amin, const Cell* cells,
+//                           int Nx, int Ny, int Nz, const XiFunc& xi, Survey* survey,
+//                           double epsrel = 1e-5, double epsabs = 1e-10);
 
 /* Read the header from the modes.abn file.  Return the file pointer to the
  * opened file, set to point at the first element of the first mode vector.

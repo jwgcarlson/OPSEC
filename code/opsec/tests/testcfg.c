@@ -41,15 +41,14 @@ void TestCfgGetSet(CuTest* tc) {
 //    CuAssertTrue(tc, cfg_get_float (cfg, "f")  == 1e-2);
     CuAssertTrue(tc, cfg_get_double(cfg, "d")  == 1e-234);
 
-    cfg_set_format(cfg, "fmt", "%c %d %g", 'a', 12, 32.4);
+    cfg_set_printf(cfg, "fmt", "%c %d %g", 'a', 12, 32.4);
     CuAssertStrEquals(tc, "a 12 32.4", cfg_get(cfg, "fmt"));
 
-    CuAssertTrue(tc, cfg_has_keys(cfg, "foo,c,s,i,l,uc,us,ui,ul,f,d,fmt", ","));
+    CuAssertTrue(tc, !cfg_missing_keys(cfg, "foo,c,s,i,l,uc,us,ui,ul,f,d,fmt"));
     copy = cfg_new_copy(cfg);
-    CuAssertTrue(tc, cfg_has_keys(copy, "foo,c,s,i,l,uc,us,ui,ul,f,d,fmt", ","));
+    CuAssertTrue(tc, !cfg_missing_keys(copy, "foo,c,s,i,l,uc,us,ui,ul,f,d,fmt"));
     cfg_destroy(copy);
 
-//    cfg_write(cfg, stdout);
     cfg_destroy(cfg);
 }
 
@@ -101,19 +100,7 @@ void TestCfgNewSub(CuTest* tc) {
     cfg_set(cfg, "food", "wise");
     cfg_set(cfg, "foo.bill", "shakespeare");
 
-    subcfg = cfg_new_sub(cfg, "foo.", 0);
-    CuAssertTrue(tc, cfg_has_key(subcfg, "foo.a"));
-    CuAssertTrue(tc, cfg_has_key(subcfg, "foo.b"));
-    CuAssertTrue(tc, cfg_has_key(subcfg, "foo.c"));
-    CuAssertTrue(tc, cfg_has_key(subcfg, "foo.bill"));
-    CuAssertTrue(tc, cfg_get_char(subcfg, "foo.a") == 'a');
-    CuAssertTrue(tc, cfg_get_char(subcfg, "foo.b") == 'b');
-    CuAssertTrue(tc, cfg_get_char(subcfg, "foo.c") == 'c');
-    CuAssertTrue(tc, strcmp(cfg_get(subcfg, "foo.bill"), "shakespeare") == 0);
-//    cfg_write(subcfg, stdout);
-    cfg_destroy(subcfg);
-
-    subcfg = cfg_new_sub(cfg, "foo.", 1);
+    subcfg = cfg_new_sub(cfg, "foo.");
     CuAssertTrue(tc, cfg_has_key(subcfg, "a"));
     CuAssertTrue(tc, cfg_has_key(subcfg, "b"));
     CuAssertTrue(tc, cfg_has_key(subcfg, "c"));
@@ -122,7 +109,7 @@ void TestCfgNewSub(CuTest* tc) {
     CuAssertTrue(tc, cfg_get_char(subcfg, "b") == 'b');
     CuAssertTrue(tc, cfg_get_char(subcfg, "c") == 'c');
     CuAssertTrue(tc, strcmp(cfg_get(subcfg, "bill"), "shakespeare") == 0);
-//    cfg_write(subcfg, stdout);
+    CuAssertTrue(tc, !cfg_has_key(subcfg, "d"));
     cfg_destroy(subcfg);
 
     cfg_destroy(cfg);

@@ -42,8 +42,6 @@ const char* usage =
     "  -h            Display this help\n"
     "  -c FILE       Read additional configuration options from FILE\n"
     "Configuration options:\n"
-    "  coordsys=TYPE Coordinate system; either spherical or cartesian (required)\n"
-    "  survey=NAME   Survey configuration (required)\n"
     "  pixfile=FILE  Write pixel values to FILE (required)\n"
     "  cellfile=FILE Read list of cells from FILE (required)\n"
     "  modefile=FILE Read KL mode coefficients from FILE (required)\n"
@@ -53,8 +51,8 @@ int main(int argc, char* argv[]) {
     Config cfg = opsec_init(argc, argv, usage);
 
     /* Read configuration options */
-    if(!cfg_has_keys(cfg, "countfile,cellfile,modefile,pixfile,Nmodes", ",")) {
-        fprintf(stderr, "dot: missing configuration options\n");
+    if(cfg_missing_keys(cfg, "countfile,cellfile,modefile,pixfile,Nmodes")) {
+        opsec_error("dot: missing configuration options\n");
         fputs(usage, stderr);
         opsec_exit(1);
     }
@@ -67,7 +65,7 @@ int main(int argc, char* argv[]) {
     /* Make sure we can write to the output file */
     FILE* fpix = fopen(pixfile, "w");
     if(fpix == NULL) {
-        fprintf(stderr, "dot: could not open '%s' for writing\n", pixfile);
+        opsec_error("dot: could not open '%s' for writing\n", pixfile);
         opsec_exit(1);
     }
 
@@ -75,7 +73,7 @@ int main(int argc, char* argv[]) {
     int Ncells;
     Cell* cells = ReadCells(cellfile, &Ncells);
     if(cells == NULL) {
-        fprintf(stderr, "dot: error reading cells\n");
+        opsec_error("dot: error reading cells\n");
         opsec_exit(1);
     }
 
@@ -87,149 +85,53 @@ int main(int argc, char* argv[]) {
         opsec_exit(1);
     }
 
-    printf("(TRACE) Read %d modes from '%s'\n", Nmodes, cellfile); fflush(stdout);
+    opsec_debug("Read %d modes from '%s'\n", Nmodes, cellfile);
 
-    /* Read galaxies */
+    /* Load survey */
     Survey* survey = InitializeSurvey(cfg);
     if(!survey)
         opsec_exit(1);
 
-    fflush(stdout);
-
-    std::vector<Galaxy> gals;
+    /* Read in galaxies */
+    vector<Galaxy> gals;
     survey->GetGalaxies(gals);
     int Ngals = (int) gals.size();
     if(Ngals == 0) {
-        fprintf(stderr, "dot: error reading galaxies\n");
+        opsec_error("dot: error reading galaxies\n");
         opsec_exit(1);
     }
+    opsec_debug("Read %d galaxies\n", Ngals);
 
-    printf("Read %d galaxies\n", Ngals);
-    fflush(stdout);
+    /* Construct a mapping between the grid index e = (d1*N2 + d2)*N3 + d3 of a
+     * cell and its index (a) within the list of non-empty cells. */
+    int N1 = survey->N1;
+    int N2 = survey->N2;
+    int N3 = survey->N3;
+    vector<int> cellmap(N1*N2*N3, -1);
+    for(int a = 0; a < Ncells; a++) {
+        const Cell& c = cells[a];
+        opsec_assert(a == c.a);
+        int e = (c.d1*N2 + c.d2)*N3 + c.d3;
+        cellmap[e] = a;
+    }
 
     /* Number of galaxies found in each cell. The last element (counts[Ncells])
      * gives the number of galaxies that don't lie in any cell.
      * Note that each galaxy carries a real-valued weight, so the count for any
      * given cell need not be integral. */
-    double* counts = (double*)opsec_calloc(Ncells+1, sizeof(double));
+    double* counts = (double*) opsec_calloc(Ncells+1, sizeof(double));
 
-    string coordsys(cfg_get(cfg, "coordsys"));
-    if(coordsys != "spherical" && coordsys != "cartesian") {
-        fprintf(stderr, "dot: missing or invalid config option: coordsys = %s\n", coordsys.c_str());
-        opsec_exit(1);
-    }
-
-    int a;
-    if(coordsys == "spherical") {
-        if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi,RMin,RMax,MuMin,MuMax,PhiMin,PhiMax", ",")) {
-            fprintf(stderr, "dot: must provide config options N{r,mu,phi} and {R,Mu,Phi}{Min,Max}\n");
-            opsec_exit(1);
-        }
-        int Nr = cfg_get_int(cfg, "Nr");
-        int Nmu = cfg_get_int(cfg, "Nmu");
-        int Nphi = cfg_get_int(cfg, "Nphi");
-        double RMin = cfg_get_double(cfg, "RMin");
-        double RMax = cfg_get_double(cfg, "RMax");
-        double MuMin = cfg_get_double(cfg, "MuMin");
-        double MuMax = cfg_get_double(cfg, "MuMax");
-        double PhiMin = cfg_get_double(cfg, "PhiMin");
-        double PhiMax = cfg_get_double(cfg, "PhiMax");
-
-        /* Create mapping between cell grid location G and cell number a, with
-         * 0 <= a < Ncells corresponding to actual cells.  A value of a = Ncells
-         * means the cell was ignored (i.e. selection function vanishes over entire
-         * cell volume). */
-        vector<int> cellmap(Nr*Nmu*Nphi, Ncells);
-        for(a = 0; a < Ncells; a++) {
-            assert(a == cells[a].a);
-            cellmap[cells[a].G] = a;
-        }
-
-        /* Count number of galaxies in each cell */
-        double r, mu, phi, w;
-        int d, e, f, G, g;
-//        #pragma omp parallel for private(g,r,mu,phi,d,e,f,G,a)
-        for(g = 0; g < Ngals; g++) {
-            r = gals[g].r;
-            mu = gals[g].mu;
-            phi = gals[g].phi;
-            w = gals[g].w;
-
-            if((RMin <= r && r < RMax) && (MuMin <= mu && mu < MuMax) && (PhiMin <= phi && phi < PhiMax)) {
-                /* Galaxy lies within cell grid.  Find which cell it lies in. */
-                d = (int) floor(Nr * (r - RMin)/(RMax - RMin));
-                e = (int) floor(Nmu * (mu - MuMin)/(MuMax - MuMin));
-                f = (int) floor(Nphi * (phi - PhiMin)/(PhiMax - PhiMin));
-                G = (d*Nmu + e)*Nphi + f;
-                a = cellmap[G];
-//                #pragma omp atomic
-                counts[a] += w;
-            }
-            else {
-                /* Cell lies outside grid.  Count this as lying in an empty cell. */
-//                #pragma omp atomic
-                counts[Ncells] += w;
-            }
-        }
-    }
-    else if(coordsys == "cartesian") {
-        if(!cfg_has_keys(cfg, "Nx,Ny,Nz,XMin,XMax,YMin,YMax,ZMin,ZMax", ",")) {
-            fprintf(stderr, "dot: must provide config options N{x,y,z} and {X,Y,Phi}{Z,Max}\n");
-            opsec_exit(1);
-        }
-        int Nx = cfg_get_int(cfg, "Nx");
-        int Ny = cfg_get_int(cfg, "Ny");
-        int Nz = cfg_get_int(cfg, "Nz");
-        double XMin = cfg_get_double(cfg, "XMin");
-        double XMax = cfg_get_double(cfg, "XMax");
-        double YMin = cfg_get_double(cfg, "YMin");
-        double YMax = cfg_get_double(cfg, "YMax");
-        double ZMin = cfg_get_double(cfg, "ZMin");
-        double ZMax = cfg_get_double(cfg, "ZMax");
-
-        /* Create mapping between cell grid location G and cell number a, with
-         * 0 <= a < Ncells corresponding to actual cells.  A value of a = Ncells
-         * means the cell was ignored (i.e. selection function vanishes over entire
-         * cell volume). */
-        vector<int> cellmap(Nx*Ny*Nz, Ncells);
-        for(a = 0; a < Ncells; a++) {
-            assert(a == cells[a].a);
-            cellmap[cells[a].G] = a;
-        }
-
-        /* Count number of galaxies in each cell */
-        double x, y, z, w;
-        int d, e, f, G, g;
-//        #pragma omp parallel for private(g,x,y,z,d,e,f,G,a)
-        for(g = 0; g < Ngals; g++) {
-            x = gals[g].x;
-            y = gals[g].y;
-            z = gals[g].z;
-            w = gals[g].w;
-
-            if((XMin <= x && x < XMax) && (YMin <= y && y < YMax) && (ZMin <= z && z < ZMax)) {
-                /* Galaxy lies within cell grid.  Find which cell it lies in. */
-                d = (int) floor(Nx * (x - XMin)/(XMax - XMin));
-                e = (int) floor(Ny * (y - YMin)/(YMax - YMin));
-                f = (int) floor(Nz * (z - ZMin)/(ZMax - ZMin));
-                G = (d*Ny + e)*Nz + f;
-                a = cellmap[G];
-//                #pragma omp atomic
-                counts[a] += w;
-            }
-            else {
-                /* Cell lies outside grid.  Count this as lying in an empty cell. */
-//                #pragma omp atomic
-                counts[Ncells] += w;
-            }
-        }
+    /* Count the (weighted) number of galaxies within each non-empty cell */
+    for(vector<Galaxy>::const_iterator g = gals.begin(); g != gals.end(); g++) {
+        int e = survey->GetGridIndex(g->x1, g->x2, g->x3);
+        int a = (e > 0) ? cellmap[e] : Ncells;
+        counts[a] += g->w;
     }
 
     /* x_a = \int d^3x \phi_a(\vec{x}) [n(\vec{x}) - \bar{n}(\vec{x})]
      *     = \bar{N}_a^{-1/2} [N_a - \bar{N}_a] */
     vector<double> x(Ncells, 0);
-//    #pragma omp parallel for
-    for(a = 0; a < Ncells; a++)
+    for(int a = 0; a < Ncells; a++)
         x[a] = (counts[a] - cells[a].Nbar)/sqrt(cells[a].Nbar);
 
     /* y_i = \int d^3x \psi_i(\vec{x}) [n(\vec{x}) - \bar{n}(\vec{x})]
@@ -255,6 +157,7 @@ int main(int argc, char* argv[]) {
     abn_write(fpix, &y[0], Nmodes, "d", NULL);
     fclose(fpix);
 
+#if 0
     /* Load model */
     Model* model = InitializeModel(cfg);
     if(!model) {
@@ -279,6 +182,7 @@ int main(int argc, char* argv[]) {
 //                                             : ComputeSignalC(cells[a], cells[a], xi);
         fprintf(fcounts, "%6d %8.4f %8.4f %8.4f\n", a, counts[a], cells[a].Nbar, cells[a].Nbar*(1 + cells[a].Nbar*S));
     }
+#endif
 
     /* Clean up */
     free(cells);

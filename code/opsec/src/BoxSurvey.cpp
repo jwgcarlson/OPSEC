@@ -74,13 +74,17 @@ struct ConstantSelectionFuncImpl : public SelectionFuncImpl {
 };
 
 
-BoxSurvey::BoxSurvey(const char* galfile_, double nbar_, double L_) {
+BoxSurvey::BoxSurvey(const char* galfile_, double nbar_, double L_)
+    : Survey(CoordSysCartesian)
+{
     galfile = galfile_;
     nbar = nbar_;
     L = L_;
 }
 
-BoxSurvey::BoxSurvey(Config cfg) {
+BoxSurvey::BoxSurvey(Config cfg)
+    : Survey(CoordSysCartesian, cfg)
+{
     galfile = cfg_get(cfg, "galfile");
     nbar = cfg_get_double(cfg, "nbar");
     L = cfg_get_double(cfg, "L");

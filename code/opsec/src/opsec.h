@@ -45,13 +45,18 @@ int opsec_error(const char *format, ...);
 int opsec_vfprintf(FILE* stream, const char *format, va_list ap);
 
 
-/* Verbose wrappers around standard memory allocation routines */
 #ifdef OPSEC_DEBUG
+    /* Verbose wrappers around standard memory allocation routines */
 #   define opsec_malloc(size) opsec_debug_malloc(size, __FILE__, __LINE__)
 #   define opsec_calloc(nmemb, size) opsec_debug_calloc(nmemb, size, __FILE__, __LINE__)
+
+    /* Assertions */
+#   define opsec_assert(expr) assert(expr)
+
 #else
 #   define opsec_malloc(size) malloc(size)
 #   define opsec_calloc(nmemb, size) calloc(nmemb, size)
+#   define opsec_assert(expr) do {} while(0)
 #endif
 
 

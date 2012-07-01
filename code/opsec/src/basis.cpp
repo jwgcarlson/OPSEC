@@ -283,7 +283,7 @@ int main(int argc, char* argv[]) {
     cfg_set_int(opts, "Ncells", Ncells);
 
     opsec_info("Writing cells to '%s'.\n", cellfile);
-    abn_write(fcells, &cells[0], Ncells, "2i8d", opts);
+    abn_write(fcells, &cells[0], Ncells, CELL_FMT_STRING, opts);
 
     fclose(fcells);
     cfg_destroy(opts);
