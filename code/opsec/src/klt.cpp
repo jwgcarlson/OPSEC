@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     /* Create matrix factory */
     double epsrel = cfg_has_key(cfg, "sig.epsrel") ? cfg_get_double(cfg, "sig.epsrel") : 1e-5;
     double epsabs = cfg_has_key(cfg, "sig.epsabs") ? cfg_get_double(cfg, "sig.epsabs") : 1e-10;
-    SignalMatrixFactory matfact(Ncells, xi, survey, cells, epsrel, epsabs);
+    SignalMatrixFactory matfact(xi, survey, Ncells, cells, epsrel, epsabs);
 
     /* Select eigensolver */
     Solver* solver = NULL;

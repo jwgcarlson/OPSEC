@@ -35,9 +35,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = basis$(EXEEXT) comma$(EXEEXT) comma-scalapack$(EXEEXT) \
-	dot$(EXEEXT) estimate$(EXEEXT) estimate-mpi$(EXEEXT) \
-	klt$(EXEEXT)
+bin_PROGRAMS = basis$(EXEEXT) comma-scalapack$(EXEEXT) dot$(EXEEXT) \
+	estimate-mpi$(EXEEXT) klt$(EXEEXT)
 subdir = src
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in TODO
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -78,13 +77,6 @@ basis_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1)
 basis_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(basis_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-am_comma_OBJECTS = comma-comma.$(OBJEXT)
-comma_OBJECTS = $(am_comma_OBJECTS)
-comma_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-comma_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CXXLD) $(comma_CXXFLAGS) $(CXXFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_comma_scalapack_OBJECTS =  \
 	comma_scalapack-comma-scalapack.$(OBJEXT)
 comma_scalapack_OBJECTS = $(am_comma_scalapack_OBJECTS)
@@ -103,14 +95,6 @@ dot_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
 dot_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(dot_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am_estimate_OBJECTS = estimate-estimate.$(OBJEXT)
-estimate_OBJECTS = $(am_estimate_OBJECTS)
-estimate_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
-estimate_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(estimate_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_estimate_mpi_OBJECTS = estimate_mpi-estimate-mpi.$(OBJEXT)
 estimate_mpi_OBJECTS = $(am_estimate_mpi_OBJECTS)
 estimate_mpi_DEPENDENCIES = libklpk.la $(am__DEPENDENCIES_1) \
@@ -152,11 +136,11 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) $(comma_SOURCES) \
-	$(comma_scalapack_SOURCES) $(dot_SOURCES) $(estimate_SOURCES) \
+SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) \
+	$(comma_scalapack_SOURCES) $(dot_SOURCES) \
 	$(estimate_mpi_SOURCES) $(klt_SOURCES)
-DIST_SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) $(comma_SOURCES) \
-	$(comma_scalapack_SOURCES) $(dot_SOURCES) $(estimate_SOURCES) \
+DIST_SOURCES = $(libklpk_la_SOURCES) $(basis_SOURCES) \
+	$(comma_scalapack_SOURCES) $(dot_SOURCES) \
 	$(estimate_mpi_SOURCES) $(klt_SOURCES)
 ETAGS = etags
 CTAGS = ctags
@@ -334,18 +318,12 @@ libklpk_la_CXXFLAGS = $(OPENMP_CFLAGS)
 basis_SOURCES = basis.cpp
 basis_CXXFLAGS = $(OPENMP_CFLAGS)
 basis_LDADD = libklpk.la $(FITSIO_LIBS)
-comma_SOURCES = comma.cpp
-comma_CXXFLAGS = $(OPENMP_CFLAGS)
-comma_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
 comma_scalapack_SOURCES = comma-scalapack.cpp
 comma_scalapack_CXXFLAGS = $(OPENMP_CFLAGS)
 comma_scalapack_LDADD = libklpk.la $(FITSIO_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 dot_SOURCES = dot.cpp
 dot_CXXFLAGS = $(OPENMP_CFLAGS)
 dot_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
-estimate_SOURCES = estimate.cpp
-estimate_CXXFLAGS = $(OPENMP_CFLAGS)
-estimate_LDADD = libklpk.la $(FITSIO_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 estimate_mpi_SOURCES = estimate-mpi.cpp
 estimate_mpi_CXXFLAGS = $(OPENMP_CFLAGS)
 estimate_mpi_LDADD = libklpk.la $(FITSIO_LIBS) $(ANASAZI_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
@@ -355,6 +333,12 @@ klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
             $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
             $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
 
+comma_old_SOURCES = comma-old.cpp
+comma_old_CXXFLAGS = $(OPENMP_CFLAGS)
+comma_old_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
+estimate_old_SOURCES = estimate-old.cpp
+estimate_old_CXXFLAGS = $(OPENMP_CFLAGS)
+estimate_old_LDADD = libklpk.la $(FITSIO_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 all: all-am
 
 .SUFFIXES:
@@ -446,18 +430,12 @@ clean-binPROGRAMS:
 basis$(EXEEXT): $(basis_OBJECTS) $(basis_DEPENDENCIES) 
 	@rm -f basis$(EXEEXT)
 	$(basis_LINK) $(basis_OBJECTS) $(basis_LDADD) $(LIBS)
-comma$(EXEEXT): $(comma_OBJECTS) $(comma_DEPENDENCIES) 
-	@rm -f comma$(EXEEXT)
-	$(comma_LINK) $(comma_OBJECTS) $(comma_LDADD) $(LIBS)
 comma-scalapack$(EXEEXT): $(comma_scalapack_OBJECTS) $(comma_scalapack_DEPENDENCIES) 
 	@rm -f comma-scalapack$(EXEEXT)
 	$(comma_scalapack_LINK) $(comma_scalapack_OBJECTS) $(comma_scalapack_LDADD) $(LIBS)
 dot$(EXEEXT): $(dot_OBJECTS) $(dot_DEPENDENCIES) 
 	@rm -f dot$(EXEEXT)
 	$(dot_LINK) $(dot_OBJECTS) $(dot_LDADD) $(LIBS)
-estimate$(EXEEXT): $(estimate_OBJECTS) $(estimate_DEPENDENCIES) 
-	@rm -f estimate$(EXEEXT)
-	$(estimate_LINK) $(estimate_OBJECTS) $(estimate_LDADD) $(LIBS)
 estimate-mpi$(EXEEXT): $(estimate_mpi_OBJECTS) $(estimate_mpi_DEPENDENCIES) 
 	@rm -f estimate-mpi$(EXEEXT)
 	$(estimate_mpi_LINK) $(estimate_mpi_OBJECTS) $(estimate_mpi_LDADD) $(LIBS)
@@ -475,12 +453,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/basis-basis.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cfg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/chealpix.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comma-comma.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comma_scalapack-comma-scalapack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cubature.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dot-dot.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eig.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate-estimate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/estimate_mpi-estimate-mpi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klt-klt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libklpk_la-AnasaziSolver.Plo@am__quote@
@@ -686,20 +662,6 @@ basis-basis.obj: basis.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(basis_CXXFLAGS) $(CXXFLAGS) -c -o basis-basis.obj `if test -f 'basis.cpp'; then $(CYGPATH_W) 'basis.cpp'; else $(CYGPATH_W) '$(srcdir)/basis.cpp'; fi`
 
-comma-comma.o: comma.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_CXXFLAGS) $(CXXFLAGS) -MT comma-comma.o -MD -MP -MF $(DEPDIR)/comma-comma.Tpo -c -o comma-comma.o `test -f 'comma.cpp' || echo '$(srcdir)/'`comma.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/comma-comma.Tpo $(DEPDIR)/comma-comma.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='comma.cpp' object='comma-comma.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_CXXFLAGS) $(CXXFLAGS) -c -o comma-comma.o `test -f 'comma.cpp' || echo '$(srcdir)/'`comma.cpp
-
-comma-comma.obj: comma.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_CXXFLAGS) $(CXXFLAGS) -MT comma-comma.obj -MD -MP -MF $(DEPDIR)/comma-comma.Tpo -c -o comma-comma.obj `if test -f 'comma.cpp'; then $(CYGPATH_W) 'comma.cpp'; else $(CYGPATH_W) '$(srcdir)/comma.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/comma-comma.Tpo $(DEPDIR)/comma-comma.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='comma.cpp' object='comma-comma.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_CXXFLAGS) $(CXXFLAGS) -c -o comma-comma.obj `if test -f 'comma.cpp'; then $(CYGPATH_W) 'comma.cpp'; else $(CYGPATH_W) '$(srcdir)/comma.cpp'; fi`
-
 comma_scalapack-comma-scalapack.o: comma-scalapack.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(comma_scalapack_CXXFLAGS) $(CXXFLAGS) -MT comma_scalapack-comma-scalapack.o -MD -MP -MF $(DEPDIR)/comma_scalapack-comma-scalapack.Tpo -c -o comma_scalapack-comma-scalapack.o `test -f 'comma-scalapack.cpp' || echo '$(srcdir)/'`comma-scalapack.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/comma_scalapack-comma-scalapack.Tpo $(DEPDIR)/comma_scalapack-comma-scalapack.Po
@@ -727,20 +689,6 @@ dot-dot.obj: dot.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='dot.cpp' object='dot-dot.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dot_CXXFLAGS) $(CXXFLAGS) -c -o dot-dot.obj `if test -f 'dot.cpp'; then $(CYGPATH_W) 'dot.cpp'; else $(CYGPATH_W) '$(srcdir)/dot.cpp'; fi`
-
-estimate-estimate.o: estimate.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_CXXFLAGS) $(CXXFLAGS) -MT estimate-estimate.o -MD -MP -MF $(DEPDIR)/estimate-estimate.Tpo -c -o estimate-estimate.o `test -f 'estimate.cpp' || echo '$(srcdir)/'`estimate.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/estimate-estimate.Tpo $(DEPDIR)/estimate-estimate.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='estimate.cpp' object='estimate-estimate.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_CXXFLAGS) $(CXXFLAGS) -c -o estimate-estimate.o `test -f 'estimate.cpp' || echo '$(srcdir)/'`estimate.cpp
-
-estimate-estimate.obj: estimate.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_CXXFLAGS) $(CXXFLAGS) -MT estimate-estimate.obj -MD -MP -MF $(DEPDIR)/estimate-estimate.Tpo -c -o estimate-estimate.obj `if test -f 'estimate.cpp'; then $(CYGPATH_W) 'estimate.cpp'; else $(CYGPATH_W) '$(srcdir)/estimate.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/estimate-estimate.Tpo $(DEPDIR)/estimate-estimate.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='estimate.cpp' object='estimate-estimate.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_CXXFLAGS) $(CXXFLAGS) -c -o estimate-estimate.obj `if test -f 'estimate.cpp'; then $(CYGPATH_W) 'estimate.cpp'; else $(CYGPATH_W) '$(srcdir)/estimate.cpp'; fi`
 
 estimate_mpi-estimate-mpi.o: estimate-mpi.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(estimate_mpi_CXXFLAGS) $(CXXFLAGS) -MT estimate_mpi-estimate-mpi.o -MD -MP -MF $(DEPDIR)/estimate_mpi-estimate-mpi.Tpo -c -o estimate_mpi-estimate-mpi.o `test -f 'estimate-mpi.cpp' || echo '$(srcdir)/'`estimate-mpi.cpp

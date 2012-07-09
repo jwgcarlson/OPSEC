@@ -116,9 +116,13 @@ int cfg_get_array_int   (Config cfg, const char* key, int nmax, int* values);
 int cfg_get_array_float (Config cfg, const char* key, int nmax, float* values);
 int cfg_get_array_double(Config cfg, const char* key, int nmax, double* values);
 
-/* Map a finite set of options into integers.
- * Usage example:
- *   cfg_get_enum(cfg, "myenum", "TRUE", 0, "FALSE", 1, "", -100); */
+/* Map a finite set of options into integers.  The variable arguments must come
+ * in pairs, each representing a name-value pair, where name is a string and
+ * value is an integer.  The last pair should be (NULL, DefaultValue).
+ * Usage example:  The "myenum" option should either be TRUE or FALSE, with
+ * the former mapping to 0, the latter to 1.  If "myenum" is neither TRUE nor
+ * FALSE (e.g. if it's missing from the configuration), return -100.
+ *   cfg_get_enum(cfg, "myenum", "TRUE", 0, "FALSE", 1, NULL, -100); */
 int cfg_get_enum(Config cfg, const char* key, ...);
 
 #if 0

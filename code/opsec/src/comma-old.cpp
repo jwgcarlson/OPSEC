@@ -98,8 +98,8 @@ int main(int argc, char* argv[]) {
 //    }
 
     /* Make sure all the necessary options are provided */
-    if(!cfg_has_keys(cfg, "coordsys,cellfile,modefile,covfile,Nmodes", ",")) {
-        if(me == 0) fprintf(stderr, "comma: missing configuration options\n");
+    if(char* missing = cfg_missing_keys(cfg, "coordsys,cellfile,modefile,covfile,Nmodes")) {
+        if(me == 0) opsec_error("comma: missing configuration options %s\n", missing);
         if(me == 0) fputs(usage, stderr);
         opsec_exit(1);
     }

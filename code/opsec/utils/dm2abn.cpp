@@ -166,15 +166,15 @@ int main(int argc, char* argv[]) {
     }
 
     /* Read remaining config options */
-    if(!cfg_has_keys(cfg, "dmfile,Lbox,origin", ",")) {
-        fprintf(stderr, "dm2abn: must specify config options dmfile, Lbox, and origin\n");
+    if(char* missing = cfg_missing_keys(cfg, "dmfile,Lbox,origin")) {
+        opsec_error("dm2abn: missing config options %s\n", missing);
         return 1;
     }
     const char* dmfile = cfg_get(cfg, "dmfile");
     double Lbox = cfg_get_double(cfg, "Lbox");
     vec3f origin;
     if(3 != sscanf(cfg_get(cfg, "origin"), "%f %f %f", &origin.x, &origin.y, &origin.z)) {
-        fprintf(stderr, "dm2abn: invalid value for config option 'origin': %s\n", cfg_get(cfg, "origin"));
+        opsec_error("dm2abn: invalid value for config option 'origin': %s\n", cfg_get(cfg, "origin"));
         return 1;
     }
 
@@ -182,7 +182,7 @@ int main(int argc, char* argv[]) {
     FILE* fdm;
     fdm = fopen(dmfile, "r");
     if(fdm == NULL) {
-        fprintf(stderr, "dm2abn: could not open file '%s'\n", dmfile);
+        opsec_error("dm2abn: could not open file '%s'\n", dmfile);
         return 0;
     }
 
@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
     int endian;
     int nread = fread(&endian, sizeof(int), 1, fdm);
     if(endian != 1) {
-        fprintf(stderr, "dm2abn: endian flag is not 1\n");
+        opsec_error("dm2abn: endian flag is not 1\n");
         fclose(fdm);
         return 0;
     }
@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
     int hsize;
     nread = fread(&hsize, sizeof(int), 1, fdm);
     if(nread != 1 || hsize != sizeof(struct FileHeader)) {
-        fprintf(stderr, "dm2abn: header size is %d, expecting %zd\n", hsize, sizeof(struct FileHeader));
+        opsec_error("dm2abn: header size is %d, expecting %zd\n", hsize, sizeof(struct FileHeader));
         fclose(fdm);
         return 0;
     }
@@ -227,8 +227,8 @@ int main(int argc, char* argv[]) {
 
     vector<Galaxy> galaxies;
     if(coordsys == "spherical") {
-        if(!cfg_has_keys(cfg, "RMin,RMax,MuMin,MuMax,PhiMin,PhiMax", ",")) {
-            fprintf(stderr, "dm2abn: must specify config options {R,Mu,Phi}{Min,Max}\n");
+        if(char* missing = cfg_missing_keys(cfg, "RMin,RMax,MuMin,MuMax,PhiMin,PhiMax")) {
+            fprintf(stderr, "dm2abn: missing config options %s\n", missing);
             return 1;
         }
         double RMin = cfg_get_double(cfg, "RMin");

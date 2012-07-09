@@ -342,8 +342,8 @@ DEFINE_CFG_SET(uchar, unsigned char, "%c")
 DEFINE_CFG_SET(ushort, unsigned short, "%hu")
 DEFINE_CFG_SET(uint, unsigned int, "%u")
 DEFINE_CFG_SET(ulong, unsigned long, "%lu")
-DEFINE_CFG_SET(float, float, "%16.16g")
-DEFINE_CFG_SET(double, double, "%16.16g")
+DEFINE_CFG_SET(float, float, "%g")
+DEFINE_CFG_SET(double, double, "%g")
 #undef DEFINE_CFG_SET
 
 void cfg_set_printf(Config cfg, const char* key, const char* fmt, ...) {

@@ -614,13 +614,13 @@ int main(int argc, char* argv[]) {
 
     /* Quick fix: grab all config entries starting with "gmock." */
     {
-        Config gmockcfg = cfg_new_sub(cfg, "gmock.", 1);
+        Config gmockcfg = cfg_new_sub(cfg, "gmock.");
         cfg_destroy(cfg);
         cfg = gmockcfg;
     }
 
-    if(!cfg_has_keys(cfg, "pkfile,N,L,observer,f,b,rhobar,Rsmooth,outfile", ",")) {
-        fprintf(stderr, "Missing configuration options.\n");
+    if(char* missing = cfg_missing_keys(cfg, "pkfile,N,L,observer,f,b,rhobar,Rsmooth,outfile")) {
+        fprintf(stderr, "gmock: missing config options %s\n", missing);
         return 1;
     }
     const char* pkfile = cfg_get(cfg, "pkfile");

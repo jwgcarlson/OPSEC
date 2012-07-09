@@ -22,3 +22,5 @@
 - allow for out-of-tree builds, and make this the default; external packages
   (e.g. OpenBLAS, cfitsio, etc.) should also be built out-of-tree instead of
   being placed in the code/ subdirectory
+- timing blocks: easy-to-use begin() and end() methods for timing blocks of
+  code, allowing for nested blocks

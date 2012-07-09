@@ -15,8 +15,8 @@ Survey::Survey(int coordsys, Config cfg)
     if(cfg) {
         /* Read common survey parameters */
         if(coordsys == CoordSysCartesian) {
-            if(cfg_missing_keys(cfg, "XMin,XMax,YMin,YMax,ZMin,ZMax,Nx,Ny,Nz")) {
-                opsec_error("Survey: missing configuration options\n");
+            if(char* missing = cfg_missing_keys(cfg, "XMin,XMax,YMin,YMax,ZMin,ZMax,Nx,Ny,Nz")) {
+                opsec_error("Survey: missing configuration options %s\n", missing);
                 opsec_abort(1);
             }
             XMin = cfg_get_double(cfg, "XMin");
@@ -30,8 +30,8 @@ Survey::Survey(int coordsys, Config cfg)
             Nz = cfg_get_int(cfg, "Nz");
         }
         else if(coordsys == CoordSysSpherical) {
-            if(cfg_missing_keys(cfg, "RMin,RMax,MuMin,MuMax,PhiMin,PhiMax,Nr,Nmu,Nphi")) {
-                opsec_error("Survey: missing configuration options\n");
+            if(char* missing = cfg_missing_keys(cfg, "RMin,RMax,MuMin,MuMax,PhiMin,PhiMax,Nr,Nmu,Nphi")) {
+                opsec_error("Survey: missing configuration options %s\n", missing);
                 opsec_abort(1);
             }
             RMin = cfg_get_double(cfg, "RMin");

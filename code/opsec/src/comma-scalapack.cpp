@@ -46,9 +46,7 @@ const char* usage =
     "  covfile=FILE   Write covariance matrices to FILE (required)\n"
     "  Nmodes=NUM     Number of KL modes (required)\n"
     "  model=NAME     Use specified model (required)\n"
-    "  coordsys=TYPE  Coordinate system; either spherical or cartesian (required)\n"
-    "  Nr,Nmu,Nphi    Spherical grid (required if coordsys = spherical)\n"
-    "  Nx,Ny,Nz       Cartesian grid (required if coordsys = cartesian)\n";
+;
 
 /* Read mode matrix B from file */
 void ReadModes(const slp::Context& pcontext, const char* modefile, int Ncells, int Nmodes, slp::Matrix<real>& B) {
@@ -112,8 +110,8 @@ int main(int argc, char* argv[]) {
     Config cfg = opsec_init(argc, argv, usage);
 
     /* Make sure all the necessary options are provided */
-    if(!cfg_has_keys(cfg, "coordsys,cellfile,modefile,covfile,Nmodes", ",")) {
-        if(me == 0) opsec_error("comma: missing configuration options\n");
+    if(char* missing = cfg_missing_keys(cfg, "cellfile,modefile,covfile,Nmodes")) {
+        if(me == 0) opsec_error("comma: missing configuration options %s\n", missing);
         if(me == 0) fputs(usage, stderr);
         opsec_exit(1);
     }
@@ -122,9 +120,28 @@ int main(int argc, char* argv[]) {
     const char* covfile = cfg_get(cfg, "covfile");
     int Nmodes = cfg_get_int(cfg, "Nmodes");
 
+    /* Read cells from file */
+    int Ncells;
+    Cell* cells = ReadCells(cellfile, &Ncells);
+    if(cells == NULL)
+        opsec_exit(1);
+    assert(Ncells >= Nmodes);
+
+    /* Load model */
+    Model* model = InitializeModel(cfg);
+    if(!model)
+        opsec_exit(1);
+    int Nparams = model->NumParams();
+
+    /* Load survey */
+    Survey* survey = InitializeSurvey(cfg);
+    if(!survey)
+        opsec_exit(1);
+    int coordsys = survey->GetCoordinateSystem();
+
     /* Decide how best to partition available processes into 2-D process grid */
     int nprow, npcol;
-    if(cfg_has_keys(cfg, "nprow,npcol", ",")) {
+    if(cfg_has_keys(cfg, "nprow,npcol")) {
         /* Use explicit values */
         nprow = cfg_get_int(cfg, "nprow");
         npcol = cfg_get_int(cfg, "npcol");
@@ -147,56 +164,6 @@ int main(int argc, char* argv[]) {
 
     /* Set up a new BLACS context for this 2-D process grid */
     slp::Context pcontext(nprow, npcol);
-
-    /* Determine coordinate system */
-    int coordsys = cfg_get_enum(cfg, "coordsys", "cartesian", CoordSysCartesian,
-                                                 "spherical", CoordSysSpherical,
-                                                 "", -1);
-    if(coordsys == -1) {
-        if(me == 0)
-            opsec_error("comma: missing or invalid config option: coordsys = %s\n", cfg_get(cfg, "coordsys"));
-        opsec_exit(1);
-    }
-
-    int N1, N2, N3;
-    if(coordsys == CoordSysSpherical) {
-        if(!cfg_has_keys(cfg, "Nr,Nmu,Nphi", ",")) {
-            if(me == 0)
-                fprintf(stderr, "comma: need Nr,Nmu,Nphi for spherical coordinates\n");
-            opsec_exit(1);
-        }
-        N1 = cfg_get_int(cfg, "Nr");
-        N2 = cfg_get_int(cfg, "Nmu");
-        N3 = cfg_get_int(cfg, "Nphi");
-    }
-    else if(coordsys == CoordSysCartesian) {
-        if(!cfg_has_keys(cfg, "Nx,Ny,Nz", ",")) {
-            if(me == 0)
-                fprintf(stderr, "comma: need Nx,Ny,Nz for cartesian coordinates\n");
-            opsec_exit(1);
-        }
-        N1 = cfg_get_int(cfg, "Nx");
-        N2 = cfg_get_int(cfg, "Ny");
-        N3 = cfg_get_int(cfg, "Nz");
-    }
-
-    /* Load model */
-    Model* model = InitializeModel(cfg);
-    if(!model)
-        opsec_exit(1);
-    int Nparams = model->NumParams();
-
-    /* Load survey */
-    Survey* survey = InitializeSurvey(cfg);
-    if(!survey)
-        opsec_exit(1);
-
-    /* Read cells from file */
-    int Ncells;
-    Cell* cells = ReadCells(cellfile, &Ncells);
-    if(cells == NULL)
-        opsec_exit(1);
-    assert(Ncells >= Nmodes);
 
     /* Choose reasonable blocking factors */
     int Ncells_block, Nmodes_block;
@@ -253,6 +220,7 @@ int main(int argc, char* argv[]) {
         Config opts = cfg_new();
         cfg_set_int(opts, "Nmodes", Nmodes);
         cfg_set_int(opts, "Nparams", Nparams);
+        cfg_set_int(opts, "packed", 1);
         abn_write_header(fout, Nparams*Nmodes*(Nmodes+1)/2, "d", opts);
         cfg_destroy(opts);
     }
@@ -272,8 +240,7 @@ int main(int argc, char* argv[]) {
             rows[aloc] = Sdesc->row_l2g(aloc);
         for(int bloc = 0; bloc < Sdesc->nloc; bloc++)
             cols[bloc] = Sdesc->col_l2g(bloc);
-        ComputeSignalMatrixBlock(Ncells, rows, cols, Svalues, Sdesc->lld,
-                                 xi, survey, cells, N1, N2, N3);
+        ComputeSignalMatrixBlock(Ncells, rows, cols, Svalues, Sdesc->lld, xi, survey, cells);
 
         if(me == 0)
             opsec_info("  Projecting onto mode basis\n");

@@ -27,15 +27,11 @@ libklpk_la_CXXFLAGS = $(OPENMP_CFLAGS)
 
 ##### Core OPSEC Binaries #####################################################
 
-bin_PROGRAMS = basis comma comma-scalapack dot estimate estimate-mpi klt
+bin_PROGRAMS = basis comma-scalapack dot estimate-mpi klt
 
 basis_SOURCES = basis.cpp
 basis_CXXFLAGS = $(OPENMP_CFLAGS)
 basis_LDADD = libklpk.la $(FITSIO_LIBS)
-
-comma_SOURCES = comma.cpp
-comma_CXXFLAGS = $(OPENMP_CFLAGS)
-comma_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 comma_scalapack_SOURCES = comma-scalapack.cpp
 comma_scalapack_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -44,10 +40,6 @@ comma_scalapack_LDADD = libklpk.la $(FITSIO_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS
 dot_SOURCES = dot.cpp
 dot_CXXFLAGS = $(OPENMP_CFLAGS)
 dot_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
-
-estimate_SOURCES = estimate.cpp
-estimate_CXXFLAGS = $(OPENMP_CFLAGS)
-estimate_LDADD = libklpk.la $(FITSIO_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 estimate_mpi_SOURCES = estimate-mpi.cpp
 estimate_mpi_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -58,6 +50,14 @@ klt_CXXFLAGS = $(OPENMP_CFLAGS)
 klt_LDADD = libklpk.la $(FITSIO_LIBS) $(PARPACK_LIBS) $(ARPACK_LIBS) \
             $(ANASAZI_LIBS) $(SCALAPACK_LIBS) $(BLACS_LIBS) \
             $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(MPIFLIBS)
+
+comma_old_SOURCES = comma-old.cpp
+comma_old_CXXFLAGS = $(OPENMP_CFLAGS)
+comma_old_LDADD = libklpk.la $(FITSIO_LIBS) $(BLAS_LIBS) $(FLIBS)
+
+estimate_old_SOURCES = estimate-old.cpp
+estimate_old_CXXFLAGS = $(OPENMP_CFLAGS)
+estimate_old_LDADD = libklpk.la $(FITSIO_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 
 printflags:

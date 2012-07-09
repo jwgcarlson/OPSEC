@@ -79,7 +79,7 @@ int ParpackSolver::Solve(int nev) {
 
     /* Initialize matrix descriptors */
     xdesc = pcontext->new_descriptor(n, 1, divup(n,nprocs), 1);
-    Bdesc = pcontext->new_descriptor(n, nev, divup(n,nprocs), nev);
+    Bdesc = pcontext->new_descriptor(n, ncv, divup(n,nprocs), ncv);
     assert(nloc == Bdesc->num_local_rows() && nloc == xdesc->num_local_rows());
     assert(ncv == Bdesc->num_local_cols() && 1 == xdesc->num_local_cols());
 
