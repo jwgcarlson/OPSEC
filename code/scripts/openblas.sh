@@ -48,14 +48,14 @@ build_openblas() {
         download_openblas
     fi
     cd $OPENBLAS_SRCDIR || exit 1
-    make || exit 1
+    make USE_OPENMP=1 || exit 1
     make install PREFIX=$PREFIX || exit 1
 }
 
 clean_openblas() {
     cd $OPENBLAS_SRCDIR || exit 1
     case "$1" in
-    clean)
+    clean|distclean)
         make clean || exit 1
         ;;
     uninstall)
