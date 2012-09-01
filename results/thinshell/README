@@ -1,0 +1,8 @@
+Tests of klt using a thin spherical shell for the survey volume.  In this case,
+the KL modes should be the real spherical harmonics, in an order determined
+by the Legendre coefficients $a_n$ of the function
+  f(x) = \xi( R \sqrt{2*(1-x)} )
+       = \sum_{n=0}^\infty a_n P_n(x) ,
+where R is the radius of the shell.
+
+As of 9 March 2012, this test case is working properly.
